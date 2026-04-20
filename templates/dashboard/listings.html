@@ -1,0 +1,125 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Annonces{% endblock %}
+{% block topbar_title %}Gestion des annonces{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Annonces</h1>
+  <p>{{ total }} annonce{{ total|pluralize }} trouvée{{ total|pluralize }}</p>
+</div>
+
+<form method="get" class="filter-bar">
+  <div class="form-group">
+    <label class="form-label">Recherche</label>
+    <input type="text" name="q" value="{{ filter_q }}" placeholder="Titre, propriétaire..." class="form-control" style="min-width:180px">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Statut</label>
+    <select name="status" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Tous</option>
+      <option value="active"   {% if filter_status == 'active'   %}selected{% endif %}>Disponible</option>
+      <option value="rented"   {% if filter_status == 'rented'   %}selected{% endif %}>Loué</option>
+      <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>Inactif</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Type</label>
+    <select name="type" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Tous types</option>
+      <option value="apartment" {% if filter_type == 'apartment' %}selected{% endif %}>Appartement</option>
+      <option value="house"     {% if filter_type == 'house'     %}selected{% endif %}>Maison</option>
+      <option value="room"      {% if filter_type == 'room'      %}selected{% endif %}>Chambre</option>
+      <option value="studio"    {% if filter_type == 'studio'    %}selected{% endif %}>Studio</option>
+      <option value="villa"     {% if filter_type == 'villa'     %}selected{% endif %}>Villa</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Ville</label>
+    <select name="city" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Toutes villes</option>
+      {% for c in cities %}<option value="{{ c }}" {% if filter_city == c %}selected{% endif %}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Vedette</label>
+    <select name="featured" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Toutes</option>
+      <option value="1" {% if filter_featured == '1' %}selected{% endif %}>En vedette</option>
+    </select>
+  </div>
+  <div class="form-group" style="align-self:flex-end">
+    <button type="submit" class="btn btn-primary">Filtrer</button>
+    <a href="{% url 'dashboard:listings' %}" class="btn btn-ghost" style="margin-left:6px">Reset</a>
+  </div>
+</form>
+
+<div class="table-card">
+  <div class="table-header">
+    <h3>{{ total }} résultat{{ total|pluralize }}</h3>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Annonce</th>
+          <th>Propriétaire</th>
+          <th>Type</th>
+          <th>Prix FCFA</th>
+          <th>Statut</th>
+          <th>Vedette</th>
+          <th>Vues</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in listings %}
+        <tr>
+          <td>
+            <a href="{{ l.get_absolute_url }}" target="_blank" style="text-decoration:none">
+              <div class="fw-600 truncate" style="font-size:.82rem;color:var(--ink)">{{ l.title }}</div>
+              <div class="text-xs text-muted">📍 {{ l.neighborhood|default:'' }}{% if l.neighborhood %}, {% endif %}{{ l.city }}</div>
+            </a>
+          </td>
+          <td>
+            <a href="{% url 'dashboard:user_detail' l.owner.pk %}" style="text-decoration:none;font-size:.8rem;color:var(--body)">
+              {{ l.owner.display_name|truncatechars:16 }}
+              {% if l.owner.is_agency %}<div class="text-xs" style="color:var(--gold-dk)">Agence</div>{% endif %}
+            </a>
+          </td>
+          <td class="text-xs">{{ l.get_type_display }}</td>
+          <td class="fw-600 text-sm">{{ l.price|floatformat:0 }}</td>
+          <td>
+            <form method="post" action="{% url 'dashboard:listing_status' l.pk %}">
+              {% csrf_token %}
+              <select name="status" onchange="this.form.submit()" class="form-control form-select" style="padding:4px 8px;font-size:.72rem;height:28px;width:110px">
+                <option value="active"   {% if l.status == 'active'   %}selected{% endif %}>Disponible</option>
+                <option value="rented"   {% if l.status == 'rented'   %}selected{% endif %}>Loué</option>
+                <option value="inactive" {% if l.status == 'inactive' %}selected{% endif %}>Inactif</option>
+              </select>
+            </form>
+          </td>
+          <td>
+            <a href="{% url 'dashboard:listing_featured' l.pk %}" class="btn btn-xs {% if l.is_featured %}btn-primary{% else %}btn-ghost{% endif %}">
+              {% if l.is_featured %}⭐ Oui{% else %}☆ Non{% endif %}
+            </a>
+          </td>
+          <td class="text-sm text-muted">{{ l.views_count }}</td>
+          <td class="text-xs text-muted">{{ l.created_at|date:"d/m/Y" }}</td>
+          <td>
+            <div class="flex gap-1">
+              <a href="{{ l.get_absolute_url }}" target="_blank" class="btn btn-ghost btn-xs">Voir</a>
+              <a href="{% url 'dashboard:listing_delete' l.pk %}" class="btn btn-danger btn-xs"
+                 onclick="return confirm('Supprimer cette annonce ?')">Suppr.</a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9"><div class="empty"><div class="empty-icon">🏠</div>Aucune annonce trouvée</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">{{ total }} annonce{{ total|pluralize }}</div>
+</div>
+{% endblock %}

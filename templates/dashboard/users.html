@@ -1,0 +1,120 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Utilisateurs{% endblock %}
+{% block topbar_title %}Gestion des utilisateurs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Utilisateurs</h1>
+  <p>{{ total }} utilisateur{{ total|pluralize }} trouvé{{ total|pluralize }}</p>
+</div>
+
+<!-- Filtres -->
+<form method="get" class="filter-bar">
+  <div class="form-group">
+    <label class="form-label">Recherche</label>
+    <input type="text" name="q" value="{{ filter_q }}" placeholder="Nom, email, agence..." class="form-control" style="min-width:200px">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Rôle</label>
+    <select name="role" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Tous les rôles</option>
+      <option value="tenant"  {% if filter_role == 'tenant'  %}selected{% endif %}>Locataires</option>
+      <option value="owner"   {% if filter_role == 'owner'   %}selected{% endif %}>Propriétaires</option>
+      <option value="agency"  {% if filter_role == 'agency'  %}selected{% endif %}>Agences</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Statut</label>
+    <select name="status" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Tous</option>
+      <option value="active"   {% if filter_status == 'active'   %}selected{% endif %}>Actifs</option>
+      <option value="inactive" {% if filter_status == 'inactive' %}selected{% endif %}>Inactifs</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Vérification</label>
+    <select name="verified" class="form-control form-select" onchange="this.form.submit()">
+      <option value="">Tous</option>
+      <option value="1" {% if filter_verified == '1' %}selected{% endif %}>Vérifiés</option>
+      <option value="0" {% if filter_verified == '0' %}selected{% endif %}>Non vérifiés</option>
+    </select>
+  </div>
+  <div class="form-group" style="align-self:flex-end">
+    <button type="submit" class="btn btn-primary">Filtrer</button>
+    <a href="{% url 'dashboard:users' %}" class="btn btn-ghost" style="margin-left:6px">Reset</a>
+  </div>
+</form>
+
+<!-- Tableau -->
+<div class="table-card">
+  <div class="table-header">
+    <h3>{{ total }} résultat{{ total|pluralize }}</h3>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Utilisateur</th>
+          <th>Email</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Vérifié</th>
+          <th>Annonces</th>
+          <th>Inscrit</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <a href="{% url 'dashboard:user_detail' u.pk %}" style="text-decoration:none">
+              <div class="fw-600" style="font-size:.83rem;color:var(--ink)">{{ u.display_name|truncatechars:22 }}</div>
+              <div class="text-xs text-muted">@{{ u.username }}</div>
+            </a>
+          </td>
+          <td class="text-sm text-muted truncate">{{ u.email|default:'-' }}</td>
+          <td>
+            <span class="badge {% if u.role == 'agency' %}badge-gold{% elif u.role == 'owner' %}badge-info{% else %}badge-muted{% endif %}">
+              {{ u.get_role_display }}
+            </span>
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-success">● Actif</span>
+            {% else %}
+              <span class="badge badge-danger">● Inactif</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_verified %}
+              <span class="badge badge-success">✓ Oui</span>
+            {% else %}
+              <span class="badge badge-warning">En attente</span>
+            {% endif %}
+          </td>
+          <td class="text-sm text-muted">{{ u.listings.count }}</td>
+          <td class="text-xs text-muted">{{ u.date_joined|date:"d/m/Y" }}</td>
+          <td>
+            <div class="flex gap-1">
+              <a href="{% url 'dashboard:user_detail' u.pk %}" class="btn btn-ghost btn-xs">Détail</a>
+              <a href="{% url 'dashboard:user_toggle_active' u.pk %}"
+                 class="btn btn-xs {% if u.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                 onclick="return confirm('{% if u.is_active %}Désactiver{% else %}Activer{% endif %} ce compte ?')">
+                {% if u.is_active %}Désactiver{% else %}Activer{% endif %}
+              </a>
+              {% if not u.is_verified %}
+              <a href="{% url 'dashboard:user_verify' u.pk %}" class="btn btn-success btn-xs">✓ Vérifier</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8"><div class="empty"><div class="empty-icon">👥</div>Aucun utilisateur trouvé</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">{{ total }} utilisateur{{ total|pluralize }} · Dernière mise à jour : maintenant</div>
+</div>
+{% endblock %}

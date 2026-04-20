@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Agences immobilières{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container"><h1>Agences immobilières</h1><p>Partenaires vérifiés sur ImmoFacile</p></div>
+</div>
+<div class="container" style="padding-bottom:60px">
+  {% if agencies %}
+  <div class="grid-3">
+    {% for agency in agencies %}
+    <a href="{% url 'agencies:detail' agency.pk %}" style="text-decoration:none;color:inherit;">
+      <div class="card" style="padding:28px;text-align:center;cursor:pointer;">
+        <div style="width:72px;height:72px;border-radius:16px;background:var(--dark);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2rem;color:var(--gold);">
+          {% if agency.avatar %}<img src="{{ agency.avatar.url }}" style="width:100%;height:100%;border-radius:16px;object-fit:cover;" alt="">
+          {% else %}🏢{% endif %}
+        </div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:4px;">{{ agency.agency_name|default:agency.username }}</div>
+        <div style="color:var(--gold);font-size:0.9rem;margin-bottom:6px;">★★★★★</div>
+        <div style="color:var(--muted);font-size:0.8rem;margin-bottom:14px;">📍 {{ agency.city|default:'Dakar' }} · <span style="color:var(--gold);">✓ Vérifié</span></div>
+        <div style="display:flex;justify-content:center;gap:24px;padding-top:14px;border-top:1px solid var(--border);">
+          <div style="text-align:center;"><div style="font-weight:700;">{{ agency.listings.count }}</div><div style="font-size:0.7rem;color:var(--muted);">Annonces</div></div>
+          <div style="text-align:center;"><div style="font-weight:700;">{{ agency.reviews.count }}</div><div style="font-size:0.7rem;color:var(--muted);">Avis</div></div>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🏢</div>
+    <h3>Aucune agence partenaire pour l'instant</h3>
+    <p>Les agences vérifiées apparaîtront ici.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

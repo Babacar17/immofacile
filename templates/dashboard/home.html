@@ -1,0 +1,253 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Tableau de bord{% endblock %}
+{% block topbar_title %}Tableau de bord{% endblock %}
+
+{% block extra_css %}
+<style>
+.activity-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-top:20px}
+@media(max-width:900px){.activity-grid{grid-template-columns:1fr}}
+.chart-wrap{background:var(--surface);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,.04)}
+.chart-title{font-size:.88rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:80px}
+.mini-bar{flex:1;border-radius:3px 3px 0 0;transition:all var(--trans);cursor:default;position:relative}
+.mini-bar:hover::after{content:attr(data-val);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:.62rem;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-bottom:4px}
+.bar-users{background:rgba(201,168,76,.6)}
+.bar-listings{background:rgba(26,122,74,.5)}
+.bar-msg{background:rgba(26,92,138,.4)}
+.chart-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--mid)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+.pending-card{background:var(--surface);border-radius:var(--r-lg);padding:0;box-shadow:var(--shadow);border:1px solid rgba(0,0,0,.04);overflow:hidden}
+.pending-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background var(--trans)}
+.pending-item:last-child{border-bottom:none}
+.pending-item:hover{background:var(--cream)}
+.p-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dk),var(--gold));display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--dark);font-size:.88rem;flex-shrink:0}
+.p-name{font-size:.83rem;font-weight:600;line-height:1.2}
+.p-sub{font-size:.72rem;color:var(--muted)}
+.cities-list{display:flex;flex-direction:column;gap:10px}
+.city-row{display:flex;align-items:center;gap:10px}
+.city-bar-wrap{flex:1;background:var(--cream2);border-radius:var(--r-full);height:8px;overflow:hidden}
+.city-bar{height:100%;background:var(--gold);border-radius:var(--r-full)}
+.city-name{font-size:.8rem;font-weight:600;width:100px;flex-shrink:0}
+.city-n{font-size:.75rem;color:var(--muted);width:30px;text-align:right;flex-shrink:0}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Bonjour, {{ request.user.display_name|truncatechars:20 }} 👋</h1>
+  <p>Vue d'ensemble de la plateforme ImmoFacile</p>
+</div>
+
+<!-- Stats row 1 : Utilisateurs -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="icon-wrap ic-gold">👥</div>
+    <div class="label">Utilisateurs total</div>
+    <div class="value">{{ stats.users_total }}</div>
+    <div class="sub">+{{ stats.users_week }} cette semaine</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-green">✅</div>
+    <div class="label">Comptes actifs</div>
+    <div class="value">{{ stats.users_active }}</div>
+    <div class="sub">{{ stats.tenants }} locataires · {{ stats.owners }} proprios</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-orange">🏢</div>
+    <div class="label">Agences</div>
+    <div class="value">{{ stats.agencies }}</div>
+    <div class="sub">{% if stats.agencies_pending %}<span class="text-danger fw-600">{{ stats.agencies_pending }} en attente</span>{% else %}Toutes vérifiées ✅{% endif %}</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-blue">🏠</div>
+    <div class="label">Annonces actives</div>
+    <div class="value">{{ stats.listings_active }}</div>
+    <div class="sub">{{ stats.listings_rented }} louées · +{{ stats.listings_week }} cette semaine</div>
+  </div>
+</div>
+
+<!-- Stats row 2 : Messages -->
+<div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div class="stat-card">
+    <div class="icon-wrap ic-blue">💬</div>
+    <div class="label">Messages total</div>
+    <div class="value">{{ stats.messages_total }}</div>
+    <div class="sub">{{ stats.messages_unread }} non lus</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-orange">📅</div>
+    <div class="label">Visites en attente</div>
+    <div class="value">{{ stats.visits_pending }}</div>
+    <div class="sub">{{ stats.visits_total }} total</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-green">📸</div>
+    <div class="label">Annonces total</div>
+    <div class="value">{{ stats.listings_total }}</div>
+    <div class="sub">{{ stats.listings_active }} disponibles</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon-wrap ic-red">⚠️</div>
+    <div class="label">Agences en attente</div>
+    <div class="value">{{ stats.agencies_pending }}</div>
+    <div class="sub"><a href="{% url 'dashboard:agencies' %}" class="text-gold" style="text-decoration:none">Gérer →</a></div>
+  </div>
+</div>
+
+<!-- Graphique + Agences en attente -->
+<div class="activity-grid">
+
+  <!-- Mini graphique activité 7 jours -->
+  <div class="chart-wrap">
+    <div class="chart-title">
+      Activité — 7 derniers jours
+      <span class="text-xs text-muted">Inscriptions · Annonces · Messages</span>
+    </div>
+    <div style="display:flex;gap:16px;align-items:flex-end">
+      {% for day in activity %}
+      <div style="flex:1;display:flex;flex-direction:column;gap:3px;align-items:center">
+        <div class="mini-bar bar-msg" data-val="{{ day.messages }} msg"
+             style="height:{% widthratio day.messages 10 60 %}px;min-height:4px"></div>
+        <div class="mini-bar bar-listings" data-val="{{ day.listings }} ann."
+             style="height:{% widthratio day.listings 5 60 %}px;min-height:4px"></div>
+        <div class="mini-bar bar-users" data-val="{{ day.users }} util."
+             style="height:{% widthratio day.users 5 60 %}px;min-height:4px"></div>
+        <div style="font-size:.62rem;color:var(--muted);margin-top:4px;white-space:nowrap">{{ day.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(201,168,76,.6)"></div>Inscriptions</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(26,122,74,.5)"></div>Annonces</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(26,92,138,.4)"></div>Messages</div>
+    </div>
+  </div>
+
+  <!-- Top villes + Agences à vérifier -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="chart-wrap" style="padding:16px 20px">
+      <div class="chart-title">Top villes</div>
+      <div class="cities-list">
+        {% for city in top_cities %}
+        {% with max_n=top_cities.0.n %}
+        <div class="city-row">
+          <div class="city-name truncate">{{ city.city }}</div>
+          <div class="city-bar-wrap">
+            <div class="city-bar" style="width:{% widthratio city.n max_n 100 %}%"></div>
+          </div>
+          <div class="city-n">{{ city.n }}</div>
+        </div>
+        {% endwith %}
+        {% empty %}
+        <div class="text-muted text-sm">Aucune donnée</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tables côte à côte -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px">
+
+  <!-- Derniers utilisateurs -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Dernières inscriptions</h3>
+      <a href="{% url 'dashboard:users' %}" class="btn btn-ghost btn-xs">Voir tout →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for u in recent_users %}
+          <tr>
+            <td>
+              <a href="{% url 'dashboard:user_detail' u.pk %}" style="text-decoration:none">
+                <div class="fw-600" style="font-size:.83rem;color:var(--ink)">{{ u.display_name|truncatechars:20 }}</div>
+                <div class="text-xs text-muted">{{ u.date_joined|date:"d/m/Y H:i" }}</div>
+              </a>
+            </td>
+            <td>
+              <span class="badge {% if u.role == 'agency' %}badge-gold{% elif u.role == 'owner' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ u.get_role_display }}
+              </span>
+            </td>
+            <td>
+              {% if u.is_active %}<span class="badge badge-success">Actif</span>
+              {% else %}<span class="badge badge-danger">Inactif</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Dernières annonces -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Dernières annonces</h3>
+      <a href="{% url 'dashboard:listings' %}" class="btn btn-ghost btn-xs">Voir tout →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Annonce</th><th>Prix</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for l in recent_listings %}
+          <tr>
+            <td>
+              <div class="fw-600 truncate" style="font-size:.83rem">{{ l.title }}</div>
+              <div class="text-xs text-muted">{{ l.owner.display_name|truncatechars:16 }} · {{ l.city }}</div>
+            </td>
+            <td class="fw-600 text-sm">{{ l.price|floatformat:0 }}</td>
+            <td>
+              <span class="badge {% if l.status == 'active' %}badge-success{% elif l.status == 'rented' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ l.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Agences en attente -->
+{% if pending_agencies %}
+<div class="table-card mt-3">
+  <div class="table-header">
+    <h3>⚠️ Agences en attente de vérification</h3>
+    <span class="badge badge-warning">{{ pending_agencies|length }} en attente</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Agence</th><th>Email</th><th>Ville</th><th>Inscrite le</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in pending_agencies %}
+        <tr>
+          <td>
+            <a href="{% url 'dashboard:user_detail' a.pk %}" style="text-decoration:none">
+              <div class="fw-600" style="font-size:.83rem">{{ a.agency_name|default:a.username }}</div>
+              {% if a.agency_license %}<div class="text-xs text-muted">Lic. {{ a.agency_license }}</div>{% endif %}
+            </a>
+          </td>
+          <td class="text-sm text-muted">{{ a.email }}</td>
+          <td class="text-sm">{{ a.city|default:'-' }}</td>
+          <td class="text-xs text-muted">{{ a.date_joined|date:"d/m/Y" }}</td>
+          <td>
+            <div class="flex gap-1">
+              <a href="{% url 'dashboard:user_verify' a.pk %}" class="btn btn-success btn-xs">✓ Vérifier</a>
+              <a href="{% url 'dashboard:user_detail' a.pk %}" class="btn btn-ghost btn-xs">Détail</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

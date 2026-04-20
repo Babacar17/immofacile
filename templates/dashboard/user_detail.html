@@ -1,0 +1,171 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}{{ u.display_name }}{% endblock %}
+{% block topbar_title %}Détail utilisateur{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+  <a href="{% url 'dashboard:users' %}">Utilisateurs</a>
+  <span>/</span> {{ u.display_name }}
+</div>
+
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start">
+
+  <!-- Carte profil -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="table-card" style="padding:24px;text-align:center">
+      <div style="width:72px;height:72px;border-radius:50%;margin:0 auto 14px;background:linear-gradient(135deg,var(--gold-dk),var(--gold));display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:700;color:var(--dark);overflow:hidden">
+        {% if u.avatar %}<img src="{{ u.avatar.url }}" style="width:100%;height:100%;object-fit:cover" alt="">
+        {% else %}{{ u.display_name|first|upper }}{% endif %}
+      </div>
+      <div class="fw-700" style="font-size:1rem;margin-bottom:4px">{{ u.display_name }}</div>
+      <div class="text-sm text-muted mb-2">@{{ u.username }}</div>
+      <div class="flex-center" style="justify-content:center;gap:6px;flex-wrap:wrap">
+        <span class="badge {% if u.role == 'agency' %}badge-gold{% elif u.role == 'owner' %}badge-info{% else %}badge-muted{% endif %}">{{ u.get_role_display }}</span>
+        {% if u.is_active %}<span class="badge badge-success">Actif</span>{% else %}<span class="badge badge-danger">Inactif</span>{% endif %}
+        {% if u.is_verified %}<span class="badge badge-success">✓ Vérifié</span>{% else %}<span class="badge badge-warning">Non vérifié</span>{% endif %}
+        {% if u.is_staff %}<span class="badge badge-gold">Admin</span>{% endif %}
+      </div>
+
+      <div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--border);text-align:left;font-size:.8rem">
+        {% if u.email %}<div class="mb-1"><span class="text-muted">Email:</span> {{ u.email }}</div>{% endif %}
+        {% if u.phone %}<div class="mb-1"><span class="text-muted">Tel:</span> {{ u.phone }}</div>{% endif %}
+        {% if u.whatsapp %}<div class="mb-1"><span class="text-muted">WhatsApp:</span> {{ u.whatsapp }}</div>{% endif %}
+        {% if u.city %}<div class="mb-1"><span class="text-muted">Ville:</span> {{ u.city }}</div>{% endif %}
+        <div class="mb-1"><span class="text-muted">Inscrit:</span> {{ u.date_joined|date:"d/m/Y H:i" }}</div>
+        <div class="mb-1"><span class="text-muted">Annonces:</span> {{ listings.count }}</div>
+        {% if u.is_agency and u.agency_name %}
+        <div class="mb-1 mt-2" style="padding-top:8px;border-top:1px solid var(--border)">
+          <span class="text-muted">Agence:</span> {{ u.agency_name }}
+        </div>
+        {% if u.agency_license %}<div class="mb-1"><span class="text-muted">Licence:</span> {{ u.agency_license }}</div>{% endif %}
+        {% if u.agency_address %}<div class="mb-1"><span class="text-muted">Adresse:</span> {{ u.agency_address }}</div>{% endif %}
+        {% if u.agency_website %}<div class="mb-1"><span class="text-muted">Site:</span> <a href="{{ u.agency_website }}" target="_blank" style="color:var(--gold)">↗</a></div>{% endif %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="table-card" style="padding:16px">
+      <div class="fw-700 text-sm mb-2">Actions rapides</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="{% url 'dashboard:user_toggle_active' u.pk %}"
+           class="btn {% if u.is_active %}btn-warning{% else %}btn-success{% endif %} btn-sm btn-full"
+           onclick="return confirm('{% if u.is_active %}Désactiver ce compte ?{% else %}Activer ce compte ?{% endif %}')">
+          {% if u.is_active %}🚫 Désactiver le compte{% else %}✅ Activer le compte{% endif %}
+        </a>
+        <a href="{% url 'dashboard:user_verify' u.pk %}"
+           class="btn {% if u.is_verified %}btn-outline{% else %}btn-success{% endif %} btn-sm btn-full"
+           onclick="return confirm('{% if u.is_verified %}Retirer la vérification ?{% else %}Vérifier ce compte ?{% endif %}')">
+          {% if u.is_verified %}↩ Retirer la vérification{% else %}✓ Vérifier le compte{% endif %}
+        </a>
+        {% if not u == request.user %}
+        <a href="{% url 'dashboard:user_make_staff' u.pk %}"
+           class="btn {% if u.is_staff %}btn-outline{% else %}btn-dark{% endif %} btn-sm btn-full"
+           onclick="return confirm('{% if u.is_staff %}Retirer les droits admin ?{% else %}Promouvoir en administrateur ?{% endif %}')">
+          {% if u.is_staff %}↩ Retirer admin{% else %}⭐ Promouvoir admin{% endif %}
+        </a>
+        <a href="{% url 'dashboard:user_delete' u.pk %}" class="btn btn-danger btn-sm btn-full">
+          🗑 Supprimer le compte
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div>
+    <!-- Annonces -->
+    <div class="table-card mb-2">
+      <div class="table-header">
+        <h3>🏠 Annonces ({{ listings.count }})</h3>
+        {% if listings %}<a href="{% url 'dashboard:listings' %}?q={{ u.username }}" class="btn btn-ghost btn-xs">Voir tout</a>{% endif %}
+      </div>
+      {% if listings %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Titre</th><th>Type</th><th>Prix</th><th>Statut</th><th>Vues</th><th>Actions</th></tr></thead>
+          <tbody>
+            {% for l in listings|slice:":8" %}
+            <tr>
+              <td><div class="fw-600 truncate" style="font-size:.82rem">{{ l.title }}</div><div class="text-xs text-muted">{{ l.city }}</div></td>
+              <td class="text-xs">{{ l.get_type_display }}</td>
+              <td class="text-sm fw-600">{{ l.price|floatformat:0 }}</td>
+              <td><span class="badge {% if l.status == 'active' %}badge-success{% elif l.status == 'rented' %}badge-info{% else %}badge-muted{% endif %}">{{ l.get_status_display }}</span></td>
+              <td class="text-sm text-muted">{{ l.views_count }}</td>
+              <td>
+                <div class="flex gap-1">
+                  <a href="{{ l.get_absolute_url }}" target="_blank" class="btn btn-ghost btn-xs">Voir</a>
+                  <form method="post" action="{% url 'dashboard:listing_status' l.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <select name="status" onchange="this.form.submit()" class="form-control" style="padding:3px 6px;font-size:.7rem;height:26px">
+                      <option value="active"   {% if l.status == 'active'   %}selected{% endif %}>Disponible</option>
+                      <option value="rented"   {% if l.status == 'rented'   %}selected{% endif %}>Loué</option>
+                      <option value="inactive" {% if l.status == 'inactive' %}selected{% endif %}>Inactif</option>
+                    </select>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:28px"><div class="empty-icon">🏠</div>Aucune annonce</div>
+      {% endif %}
+    </div>
+
+    <!-- Messages reçus -->
+    <div class="table-card mb-2">
+      <div class="table-header"><h3>📥 Messages reçus ({{ received.count }})</h3></div>
+      {% if received %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>De</th><th>Annonce</th><th>Extrait</th><th>Statut</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for m in received %}
+            <tr>
+              <td class="text-sm fw-600">{{ m.sender.display_name|truncatechars:16 }}</td>
+              <td class="text-xs text-muted truncate">{{ m.listing.title|default:'-'|truncatechars:20 }}</td>
+              <td class="text-xs text-muted truncate">{{ m.body|truncatechars:40 }}</td>
+              <td><span class="badge {% if m.status == 'sent' %}badge-warning{% else %}badge-muted{% endif %}">{{ m.get_status_display }}</span></td>
+              <td class="text-xs text-muted">{{ m.created_at|date:"d/m H:i" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:20px"><div class="empty-icon">📭</div>Aucun message reçu</div>
+      {% endif %}
+    </div>
+
+    <!-- Visites -->
+    <div class="table-card">
+      <div class="table-header"><h3>📅 Demandes de visite ({{ visits.count }})</h3></div>
+      {% if visits %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Annonce</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for v in visits %}
+            <tr>
+              <td class="text-sm fw-600 truncate">{{ v.listing.title }}</td>
+              <td class="text-sm">{{ v.date|date:"d/m/Y" }} {{ v.time_slot|time:"H:i" }}</td>
+              <td>
+                <span class="badge {% if v.status == 'accepted' %}badge-success{% elif v.status == 'declined' %}badge-danger{% elif v.status == 'pending' %}badge-warning{% else %}badge-muted{% endif %}">
+                  {{ v.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty" style="padding:20px"><div class="empty-icon">📅</div>Aucune demande de visite</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Agences{% endblock %}
+{% block topbar_title %}Gestion des agences{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Agences immobilières</h1>
+  <p>{{ agencies.count }} agence{{ agencies.count|pluralize }} inscrite{{ agencies.count|pluralize }}</p>
+</div>
+
+<div class="table-card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Agence</th>
+          <th>Contact</th>
+          <th>Ville</th>
+          <th>Licence</th>
+          <th>Annonces</th>
+          <th>Avis</th>
+          <th>Vérifiée</th>
+          <th>Active</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in agencies %}
+        <tr>
+          <td>
+            <a href="{% url 'dashboard:user_detail' a.pk %}" style="text-decoration:none">
+              <div class="fw-600" style="font-size:.83rem;color:var(--ink)">{{ a.agency_name|default:a.username }}</div>
+              <div class="text-xs text-muted">@{{ a.username }}</div>
+            </a>
+          </td>
+          <td class="text-xs text-muted">{{ a.email }}<br>{% if a.phone %}{{ a.phone }}{% endif %}</td>
+          <td class="text-sm">{{ a.city|default:'-' }}</td>
+          <td class="text-xs text-muted">{{ a.agency_license|default:'-' }}</td>
+          <td class="text-sm text-muted">{{ a.listing_count }}</td>
+          <td class="text-sm text-muted">{{ a.review_count }}</td>
+          <td>
+            {% if a.is_verified %}<span class="badge badge-success">✓ Oui</span>
+            {% else %}<span class="badge badge-warning">Non</span>{% endif %}
+          </td>
+          <td>
+            {% if a.is_active %}<span class="badge badge-success">Oui</span>
+            {% else %}<span class="badge badge-danger">Non</span>{% endif %}
+          </td>
+          <td>
+            <div class="flex gap-1">
+              <a href="{% url 'dashboard:user_detail' a.pk %}" class="btn btn-ghost btn-xs">Détail</a>
+              {% if not a.is_verified %}
+              <a href="{% url 'dashboard:user_verify' a.pk %}" class="btn btn-success btn-xs">✓ Vérifier</a>
+              {% else %}
+              <a href="{% url 'dashboard:user_verify' a.pk %}" class="btn btn-outline btn-xs" onclick="return confirm('Retirer la vérification ?')">↩</a>
+              {% endif %}
+              <a href="{% url 'dashboard:user_toggle_active' a.pk %}"
+                 class="btn btn-xs {% if a.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                 onclick="return confirm('{% if a.is_active %}Désactiver{% else %}Activer{% endif %} cette agence ?')">
+                {% if a.is_active %}Désact.{% else %}Activer{% endif %}
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9"><div class="empty"><div class="empty-icon">🏢</div>Aucune agence inscrite</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

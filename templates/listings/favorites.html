@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Mes favoris{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container"><h1>Mes favoris</h1><p>Les biens que vous avez sauvegardés</p></div>
+</div>
+<div class="container" style="padding-bottom:60px">
+  {% if favorites %}
+  <div class="grid-3">
+    {% for fav in favorites %}
+    <a href="{% url 'listings:detail' fav.listing.pk %}" class="card listing-card">
+      <div class="card-img">
+        {% with fav.listing.get_main_photo as photo %}
+          {% if photo %}<img src="{{ photo.image.url }}" alt="{{ fav.listing.title }}">
+          {% else %}<div class="no-photo">🏠</div>{% endif %}
+        {% endwith %}
+        <a href="{% url 'listings:toggle_favorite' fav.listing.pk %}" class="fav-btn">❤️</a>
+      </div>
+      <div class="card-body">
+        <div class="listing-price">{{ fav.listing.price|floatformat:0 }} FCFA <small>/ mois</small></div>
+        <div class="listing-title">{{ fav.listing.title }}</div>
+        <div class="listing-location">📍 {{ fav.listing.city }}</div>
+        <div class="listing-meta">
+          <span class="meta-item">🛏 {{ fav.listing.rooms }} pièce{{ fav.listing.rooms|pluralize }}</span>
+          {% if fav.listing.surface %}<span class="meta-item">📐 {{ fav.listing.surface }} m²</span>{% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🤍</div>
+    <h3>Aucun favori pour l'instant</h3>
+    <p>Cliquez sur le cœur sur une annonce pour la sauvegarder</p>
+    <a href="{% url 'listings:home' %}" class="btn btn-gold mt-2">Explorer les annonces</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Mes demandes de visite{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container"><h1>Mes demandes de visite</h1><p>Suivi de vos visites planifiées</p></div>
+</div>
+<div class="container" style="padding-bottom:60px">
+  {% if visits %}
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    {% for visit in visits %}
+    <div class="card card-body flex-center justify-between gap-2" style="flex-wrap:wrap;cursor:default;">
+      <div>
+        <a href="{% url 'listings:detail' visit.listing.pk %}" style="font-weight:700;font-size:0.95rem;color:var(--ink);text-decoration:none;">{{ visit.listing.title }}</a>
+        <div style="color:var(--muted);font-size:0.82rem;margin-top:4px;">📍 {{ visit.listing.city }} · 🗓 {{ visit.date|date:"d/m/Y" }} à {{ visit.time_slot|time:"H:i" }}</div>
+        {% if visit.note %}<div style="color:var(--mid);font-size:0.82rem;margin-top:6px;">{{ visit.note }}</div>{% endif %}
+      </div>
+      <span style="padding:5px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;flex-shrink:0;
+        {% if visit.status == 'pending' %}background:rgba(201,168,76,0.12);color:var(--gold)
+        {% elif visit.status == 'accepted' %}background:#EAF6EE;color:var(--success)
+        {% elif visit.status == 'declined' %}background:#FDECEA;color:var(--danger)
+        {% else %}background:var(--cream);color:var(--mid){% endif %}">
+        {{ visit.get_status_display }}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📅</div>
+    <h3>Aucune demande de visite</h3>
+    <p>Demandez une visite depuis une annonce</p>
+    <a href="{% url 'listings:home' %}" class="btn btn-gold mt-2">Explorer les annonces</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% block title %}{{ listing.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  .detail-layout { display: grid; grid-template-columns: 1fr 360px; gap: 36px; align-items: start; padding: 48px 0; }
+  #detail-map { height: 240px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .leaflet-popup-content-wrapper { border-radius: 10px !important; font-family: 'DM Sans', sans-serif; }
+  @media(max-width:900px) { .detail-layout { grid-template-columns: 1fr; } }
+
+  /* GALERIE */
+  .gallery { border-radius: var(--radius); overflow: hidden; background: var(--border); height: 420px; position: relative; margin-bottom: 8px; }
+  .gallery img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery .no-photo { width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:5rem;background:linear-gradient(135deg,#E8E0D0,#D4C9B0); }
+  .gallery-thumbs { display: flex; gap: 8px; overflow-x: auto; }
+  .gallery-thumbs img { width: 80px; height: 60px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+  .gallery-thumbs img:hover, .gallery-thumbs img.active { opacity: 1; outline: 2px solid var(--gold); }
+
+  /* INFOS */
+  .info-section { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+  .info-section:last-child { border-bottom: none; }
+  .info-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+  .amenity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .amenity-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--mid); }
+  .amenity-item.yes { color: var(--success); }
+  .amenity-item.no { color: var(--border); text-decoration: line-through; }
+
+  /* SIDEBAR */
+  .sidebar-card { background: var(--white); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); position: sticky; top: 80px; }
+  .sidebar-price { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; color: var(--ink); }
+  .sidebar-price small { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+  .sidebar-meta { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; padding: 16px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .sidebar-meta-item { text-align: center; flex: 1; min-width: 60px; }
+  .sidebar-meta-item .val { font-weight: 700; font-size: 1.1rem; color: var(--ink); }
+  .sidebar-meta-item .lbl { font-size: 0.7rem; color: var(--muted); }
+  .sidebar-owner { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .owner-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--dark); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--white); font-weight: 700; flex-shrink: 0; }
+  .owner-name { font-weight: 600; font-size: 0.9rem; }
+  .owner-badge { font-size: 0.72rem; color: var(--muted); }
+  .verified { color: var(--gold); font-size: 0.72rem; }
+  .action-btns { display: flex; flex-direction: column; gap: 10px; }
+  .action-btns .btn { justify-content: center; padding: 12px; }
+
+  /* DETAILS GRID */
+  .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--cream); border-radius: 8px; font-size: 0.88rem; }
+  .detail-row .lbl { color: var(--muted); }
+  .detail-row .val { font-weight: 600; }
+
+  /* SIMILAR */
+  .similar-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-top: 20px; }
+  @media(max-width:700px){ .similar-grid { grid-template-columns: 1fr; } .amenity-grid { grid-template-columns: 1fr 1fr; } .details-grid { grid-template-columns: 1fr; } }
+
+  /* BREADCRUMB */
+  .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); margin-bottom: 20px; }
+  .breadcrumb a { color: var(--muted); text-decoration: none; } .breadcrumb a:hover { color: var(--gold); }
+  .breadcrumb span { color: var(--border); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="detail-layout">
+
+    <!-- COLONNE GAUCHE -->
+    <div>
+      <!-- Breadcrumb -->
+      <div class="breadcrumb">
+        <a href="{% url 'listings:home' %}">Accueil</a>
+        <span>/</span>
+        <a href="{% url 'listings:home' %}?type={{ listing.type }}">{{ listing.get_type_display }}</a>
+        <span>/</span>
+        <span>{{ listing.title }}</span>
+      </div>
+
+      <!-- Titre + statut -->
+      <div class="flex-center justify-between mb-2">
+        <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;line-height:1.2">{{ listing.title }}</h1>
+        <span style="font-size:0.75rem;padding:4px 12px;border-radius:20px;font-weight:700;
+          {% if listing.status == 'active' %}background:#EAF6EE;color:var(--success)
+          {% elif listing.status == 'rented' %}background:#FDECEA;color:var(--danger)
+          {% else %}background:var(--border);color:var(--muted){% endif %}">
+          {{ listing.get_status_display }}
+        </span>
+      </div>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:24px;">
+        📍 {% if listing.neighborhood %}{{ listing.neighborhood }}, {% endif %}{{ listing.city }}
+        {% if listing.address %} — {{ listing.address }}{% endif %}
+        &nbsp;·&nbsp; 👁 {{ listing.views_count }} vue{{ listing.views_count|pluralize }}
+        &nbsp;·&nbsp; 🗓 Publié le {{ listing.created_at|date:"d/m/Y" }}
+      </p>
+
+      <!-- Galerie -->
+      <div class="gallery">
+        {% with listing.get_main_photo as photo %}
+          {% if photo %}
+            <img src="{{ photo.image.url }}" alt="{{ listing.title }}" id="main-img">
+          {% else %}
+            <div class="no-photo">
+              {% if listing.type == 'house' %}🏡{% elif listing.type == 'room' %}🛏{% elif listing.type == 'villa' %}🏰{% else %}🏢{% endif %}
+            </div>
+          {% endif %}
+        {% endwith %}
+      </div>
+      {% if listing.photos.count > 1 %}
+      <div class="gallery-thumbs mt-1">
+        {% for photo in listing.photos.all %}
+          <img src="{{ photo.image.url }}" alt="{{ photo.caption }}" class="{% if forloop.first %}active{% endif %}"
+               onclick="document.getElementById('main-img').src='{{ photo.image.url }}'; document.querySelectorAll('.gallery-thumbs img').forEach(i=>i.classList.remove('active')); this.classList.add('active');">
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Description -->
+      <div class="info-section mt-3">
+        <div class="info-title">Description</div>
+        <p style="color:var(--mid);line-height:1.8;font-size:0.92rem;white-space:pre-line">{{ listing.description }}</p>
+      </div>
+
+      <!-- Détails -->
+      <div class="info-section">
+        <div class="info-title">Caractéristiques</div>
+        <div class="details-grid">
+          <div class="detail-row"><span class="lbl">Type</span><span class="val">{{ listing.get_type_display }}</span></div>
+          <div class="detail-row"><span class="lbl">Pièces</span><span class="val">{{ listing.rooms }}</span></div>
+          {% if listing.surface %}<div class="detail-row"><span class="lbl">Surface</span><span class="val">{{ listing.surface }} m²</span></div>{% endif %}
+          <div class="detail-row"><span class="lbl">Salles de bain</span><span class="val">{{ listing.bathrooms }}</span></div>
+          {% if listing.floor is not None %}<div class="detail-row"><span class="lbl">Étage</span><span class="val">{{ listing.floor }}</span></div>{% endif %}
+          <div class="detail-row"><span class="lbl">Ville</span><span class="val">{{ listing.city }}</span></div>
+          {% if listing.neighborhood %}<div class="detail-row"><span class="lbl">Quartier</span><span class="val">{{ listing.neighborhood }}</span></div>{% endif %}
+        </div>
+      </div>
+
+      <!-- Équipements -->
+      <div class="info-section">
+        <div class="info-title">Équipements</div>
+        <div class="amenity-grid">
+          <div class="amenity-item {% if listing.furnished %}yes{% else %}no{% endif %}">{% if listing.furnished %}✅{% else %}❌{% endif %} Meublé</div>
+          <div class="amenity-item {% if listing.has_parking %}yes{% else %}no{% endif %}">{% if listing.has_parking %}✅{% else %}❌{% endif %} Parking</div>
+          <div class="amenity-item {% if listing.has_wifi %}yes{% else %}no{% endif %}">{% if listing.has_wifi %}✅{% else %}❌{% endif %} WiFi</div>
+          <div class="amenity-item {% if listing.has_ac %}yes{% else %}no{% endif %}">{% if listing.has_ac %}✅{% else %}❌{% endif %} Climatisation</div>
+          <div class="amenity-item {% if listing.has_garden %}yes{% else %}no{% endif %}">{% if listing.has_garden %}✅{% else %}❌{% endif %} Jardin</div>
+          <div class="amenity-item {% if listing.has_pool %}yes{% else %}no{% endif %}">{% if listing.has_pool %}✅{% else %}❌{% endif %} Piscine</div>
+          <div class="amenity-item {% if listing.has_security %}yes{% else %}no{% endif %}">{% if listing.has_security %}✅{% else %}❌{% endif %} Gardiennage</div>
+        </div>
+      </div>
+
+      <!-- MINI-CARTE -->
+      {% if listing.latitude and listing.longitude %}
+      <div class="info-section">
+        <div class="info-title">📍 Localisation</div>
+        <div id="detail-map"></div>
+        <p style="font-size:0.78rem;color:var(--muted);margin-top:8px;">
+          {{ listing.neighborhood|default:'' }}{% if listing.neighborhood %}, {% endif %}{{ listing.city }}
+          — <a href="{% url 'listings:map' %}" style="color:var(--gold);text-decoration:none;">Voir toutes les annonces sur la carte →</a>
+        </p>
+      </div>
+      {% else %}
+      <div class="info-section">
+        <div class="info-title">📍 Localisation</div>
+        <div style="background:var(--cream);border-radius:var(--radius);padding:28px;text-align:center;color:var(--muted);font-size:0.85rem;">
+          <div style="font-size:1.8rem;margin-bottom:8px;">📍</div>
+          {{ listing.neighborhood|default:'' }}{% if listing.neighborhood %}, {% endif %}{{ listing.city }}
+          <br><span style="font-size:0.78rem;">Coordonnées non renseignées</span>
+        </div>
+        <a href="{% url 'listings:map' %}" style="display:inline-block;margin-top:10px;color:var(--gold);font-size:0.82rem;text-decoration:none;">Voir la carte des annonces →</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+      <div class="sidebar-card">
+        <div class="sidebar-price">{{ listing.price|floatformat:0 }} FCFA <small>/ mois</small></div>
+
+        <div class="sidebar-meta">
+          <div class="sidebar-meta-item"><div class="val">{{ listing.rooms }}</div><div class="lbl">Pièces</div></div>
+          {% if listing.surface %}<div class="sidebar-meta-item"><div class="val">{{ listing.surface }}</div><div class="lbl">m²</div></div>{% endif %}
+          <div class="sidebar-meta-item"><div class="val">{{ listing.bathrooms }}</div><div class="lbl">SDB</div></div>
+        </div>
+
+        <!-- Propriétaire -->
+        <div class="sidebar-owner">
+          <div class="owner-avatar">
+            {% if listing.owner.avatar %}
+              <img src="{{ listing.owner.avatar.url }}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="">
+            {% else %}
+              {{ listing.owner.display_name|first|upper }}
+            {% endif %}
+          </div>
+          <div>
+            <div class="owner-name">{{ listing.owner.display_name }}</div>
+            <div class="owner-badge">
+              {{ listing.owner.get_role_display }}
+              {% if listing.owner.is_verified %}<span class="verified">· ✓ Vérifié</span>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        {% if user.is_authenticated %}
+          {% if user != listing.owner %}
+          <div class="action-btns">
+            <a href="{% url 'messaging:send' listing.pk %}" class="btn btn-gold">💬 Envoyer un message</a>
+            <a href="{% url 'messaging:visit_request' listing.pk %}" class="btn btn-dark">📅 Demander une visite</a>
+            <a href="{% url 'listings:toggle_favorite' listing.pk %}" class="btn" style="border:1.5px solid var(--border);color:var(--mid)">
+              {% if is_favorite %}❤️ Retirer des favoris{% else %}🤍 Ajouter aux favoris{% endif %}
+            </a>
+          </div>
+          {% else %}
+          <div class="action-btns">
+            <a href="{% url 'listings:edit' listing.pk %}" class="btn btn-dark">✏️ Modifier l'annonce</a>
+            <a href="{% url 'listings:delete' listing.pk %}" class="btn btn-danger">🗑 Supprimer</a>
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="action-btns">
+          <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-gold">Connectez-vous pour contacter</a>
+        </div>
+        {% endif %}
+
+        {% if listing.owner.is_agency %}
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:0.82rem;color:var(--muted);">
+          <a href="{% url 'agencies:detail' listing.owner.pk %}" style="color:var(--gold);text-decoration:none;font-weight:600;">Voir le profil de l'agence →</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ANNONCES SIMILAIRES -->
+  {% if similar %}
+  <div class="section" style="padding-top:0">
+    <h2 class="section-title">Annonces similaires</h2>
+    <div class="divider"></div>
+    <div class="similar-grid">
+      {% for item in similar %}
+      <a href="{% url 'listings:detail' item.pk %}" class="card listing-card">
+        <div class="card-img">
+          {% with item.get_main_photo as photo %}
+            {% if photo %}<img src="{{ photo.image.url }}" alt="{{ item.title }}">
+            {% else %}<div class="no-photo">🏠</div>{% endif %}
+          {% endwith %}
+        </div>
+        <div class="card-body">
+          <div class="listing-price">{{ item.price|floatformat:0 }} FCFA <small>/ mois</small></div>
+          <div class="listing-title">{{ item.title }}</div>
+          <div class="listing-location">📍 {{ item.city }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if listing.latitude and listing.longitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const detailMap = L.map('detail-map', {
+    center: [{{ listing.latitude }}, {{ listing.longitude }}],
+    zoom: 15,
+    scrollWheelZoom: false,
+    zoomControl: true,
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(detailMap);
+
+  // Marqueur personnalisé avec le prix
+  const priceLabel = parseInt("{{ listing.price }}").toLocaleString('fr-FR') + ' FCFA';
+  const icon = L.divIcon({
+    html: `<div style="
+      background: #C9A84C; color: #0F0F0F;
+      padding: 5px 10px; border-radius: 8px;
+      font-size: 0.75rem; font-weight: 700;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+      white-space: nowrap; position: relative;
+    ">${priceLabel}<div style="
+      position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);
+      border:5px solid transparent;border-top-color:#C9A84C;border-bottom:none;
+    "></div></div>`,
+    className: '',
+    iconAnchor: [0, 32],
+  });
+
+  L.marker([{{ listing.latitude }}, {{ listing.longitude }}], { icon })
+    .addTo(detailMap)
+    .bindPopup(`
+      <div style="font-family:'DM Sans',sans-serif;padding:4px;">
+        <strong style="font-size:0.9rem;">{{ listing.title|escapejs }}</strong><br>
+        <span style="color:#8A8A8A;font-size:0.78rem;">📍 {{ listing.neighborhood|default:listing.city|escapejs }}</span>
+      </div>`)
+    .openPopup();
+
+  // Cercle de zone approximatif
+  L.circle([{{ listing.latitude }}, {{ listing.longitude }}], {
+    radius: 200,
+    color: '#C9A84C',
+    fillColor: '#C9A84C',
+    fillOpacity: 0.08,
+    weight: 1.5,
+    dashArray: '4 4',
+  }).addTo(detailMap);
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} une annonce{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <h1>{{ action }} une annonce</h1>
+    <p>Remplissez les informations de votre bien immobilier</p>
+  </div>
+</div>
+
+<div class="container-sm" style="padding-bottom:60px">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Infos de base -->
+    <div class="form-card mb-3">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:20px;">Informations générales</h3>
+
+      <div class="form-group">
+        <label class="form-label">Titre de l'annonce *</label>
+        {{ form.title }}
+        {% if form.title.errors %}<div class="form-error">{{ form.title.errors.0 }}</div>{% endif %}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Type de bien *</label>
+        {{ form.type }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description *</label>
+        {{ form.description }}
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">Décrivez votre bien en détail : état, environnement, accès...</div>
+      </div>
+    </div>
+
+    <!-- Localisation -->
+    <div class="form-card mb-3">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:20px;">Localisation</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Ville *</label>
+          {{ form.city }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quartier</label>
+          {{ form.neighborhood }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Adresse complète</label>
+        {{ form.address }}
+      </div>
+
+      <!-- Géocodage automatique -->
+      <div style="background:var(--cream);border-radius:10px;padding:16px;margin-top:8px;">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:10px;color:var(--ink);">📍 Position sur la carte</div>
+        <button type="button" onclick="geocodeAddress()" class="btn btn-dark btn-sm" style="margin-bottom:12px;">
+          🔍 Localiser automatiquement
+        </button>
+        <div id="geocode-status" style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;"></div>
+        <div id="geocode-map" style="height:200px;border-radius:8px;display:none;overflow:hidden;"></div>
+        <div class="form-row" style="margin-top:10px;">
+          <div class="form-group">
+            <label class="form-label">Latitude</label>
+            {{ form.latitude }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Longitude</label>
+            {{ form.longitude }}
+          </div>
+        </div>
+        <p style="font-size:0.73rem;color:var(--muted);margin-top:4px;">
+          💡 Cliquez "Localiser" pour remplir automatiquement, ou entrez les coordonnées manuellement.
+        </p>
+      </div>
+    </div>
+
+    <!-- Détails -->
+    <div class="form-card mb-3">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:20px;">Détails du logement</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Loyer mensuel (FCFA) *</label>
+          {{ form.price }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Surface (m²)</label>
+          {{ form.surface }}
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre de pièces *</label>
+          {{ form.rooms }}
+        </div>
+        <div class="form-group">
+          <label class="form-label">Salles de bain</label>
+          {{ form.bathrooms }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Étage (0 = rez-de-chaussée)</label>
+        {{ form.floor }}
+      </div>
+    </div>
+
+    <!-- Équipements -->
+    <div class="form-card mb-3">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:20px;">Équipements disponibles</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <label class="form-check"><input type="checkbox" name="furnished" {% if form.furnished.value %}checked{% endif %}> Meublé</label>
+        <label class="form-check"><input type="checkbox" name="has_parking" {% if form.has_parking.value %}checked{% endif %}> Parking</label>
+        <label class="form-check"><input type="checkbox" name="has_wifi" {% if form.has_wifi.value %}checked{% endif %}> WiFi inclus</label>
+        <label class="form-check"><input type="checkbox" name="has_ac" {% if form.has_ac.value %}checked{% endif %}> Climatisation</label>
+        <label class="form-check"><input type="checkbox" name="has_garden" {% if form.has_garden.value %}checked{% endif %}> Jardin</label>
+        <label class="form-check"><input type="checkbox" name="has_pool" {% if form.has_pool.value %}checked{% endif %}> Piscine</label>
+        <label class="form-check"><input type="checkbox" name="has_security" {% if form.has_security.value %}checked{% endif %}> Gardiennage</label>
+      </div>
+    </div>
+
+    <!-- Photos -->
+    <div class="form-card mb-3">
+      <h3 style="font-family:'Playfair Display',serif;margin-bottom:8px;">Photos</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">Ajoutez des photos via l'administration Django après publication.</p>
+      <div style="border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;color:var(--muted);">
+        📷 Photos gérées depuis l'interface admin
+      </div>
+    </div>
+
+    <!-- Erreurs globales -->
+    {% if form.non_field_errors %}
+    <div class="alert alert-danger mb-2">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-gold" style="flex:1;justify-content:center;padding:14px;">
+        {% if action == 'Publier' %}🚀 Publier l'annonce{% else %}✅ Enregistrer les modifications{% endif %}
+      </button>
+      <a href="{% url 'listings:home' %}" class="btn btn-dark">Annuler</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+let geocodeMap = null;
+let geocodeMarker = null;
+
+async function geocodeAddress() {
+  const city    = document.querySelector('[name="city"]').value.trim();
+  const hood    = document.querySelector('[name="neighborhood"]').value.trim();
+  const address = document.querySelector('[name="address"]').value.trim();
+
+  if (!city) {
+    setGeoStatus('⚠️ Veuillez entrer une ville d\'abord.', 'var(--danger)');
+    return;
+  }
+
+  const query = [address, hood, city, 'Sénégal'].filter(Boolean).join(', ');
+  setGeoStatus('🔍 Recherche en cours...', 'var(--muted)');
+
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+    const data = await res.json();
+    if (!data.length) {
+      const res2  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city + ', Sénégal')}&format=json&limit=1`);
+      const data2 = await res2.json();
+      if (!data2.length) { setGeoStatus('❌ Adresse introuvable. Entrez les coordonnées manuellement.', 'var(--danger)'); return; }
+      placeOnMap(parseFloat(data2[0].lat), parseFloat(data2[0].lon), data2[0].display_name);
+    } else {
+      placeOnMap(parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name);
+    }
+  } catch (e) {
+    setGeoStatus('❌ Erreur réseau. Coordonnées à saisir manuellement.', 'var(--danger)');
+  }
+}
+
+function placeOnMap(lat, lng, label) {
+  document.querySelector('[name="latitude"]').value  = lat.toFixed(6);
+  document.querySelector('[name="longitude"]').value = lng.toFixed(6);
+  setGeoStatus('✅ Localisé : ' + label.split(',').slice(0, 2).join(','), 'var(--success)');
+
+  const mapDiv = document.getElementById('geocode-map');
+  mapDiv.style.display = 'block';
+
+  if (!geocodeMap) {
+    geocodeMap = L.map('geocode-map', { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap', maxZoom: 19,
+    }).addTo(geocodeMap);
+    geocodeMap.on('click', e => {
+      const { lat, lng } = e.latlng;
+      document.querySelector('[name="latitude"]').value  = lat.toFixed(6);
+      document.querySelector('[name="longitude"]').value = lng.toFixed(6);
+      if (geocodeMarker) geocodeMap.removeLayer(geocodeMarker);
+      geocodeMarker = L.marker([lat, lng]).addTo(geocodeMap);
+      setGeoStatus('📍 Position ajustée manuellement', 'var(--success)');
+    });
+  }
+
+  geocodeMap.setView([lat, lng], 15);
+  if (geocodeMarker) geocodeMap.removeLayer(geocodeMarker);
+  geocodeMarker = L.marker([lat, lng]).addTo(geocodeMap)
+    .bindPopup('📍 Cliquez sur la carte pour ajuster la position').openPopup();
+}
+
+function setGeoStatus(msg, color) {
+  const el = document.getElementById('geocode-status');
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+window.addEventListener('load', () => {
+  const lat = document.querySelector('[name="latitude"]')?.value;
+  const lng = document.querySelector('[name="longitude"]')?.value;
+  if (lat && lng && parseFloat(lat) && parseFloat(lng)) {
+    placeOnMap(parseFloat(lat), parseFloat(lng), 'Position enregistrée');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Supprimer l'annonce{% endblock %}
+{% block content %}
+<div class="container-sm" style="padding:60px 24px">
+  <div class="form-card text-center">
+    <div style="font-size:3rem;margin-bottom:16px;">🗑</div>
+    <h2 style="font-family:'Playfair Display',serif;margin-bottom:8px;">Supprimer cette annonce ?</h2>
+    <p style="color:var(--muted);margin-bottom:8px;">Vous êtes sur le point de supprimer :</p>
+    <p style="font-weight:700;margin-bottom:8px;">« {{ listing.title }} »</p>
+    <p style="color:var(--danger);font-size:0.85rem;margin-bottom:28px;">Cette action est irréversible.</p>
+    <form method="post" style="display:flex;gap:12px;justify-content:center;">
+      {% csrf_token %}
+      <a href="{% url 'listings:my_listings' %}" class="btn btn-dark">Annuler</a>
+      <button type="submit" class="btn btn-danger">Confirmer la suppression</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

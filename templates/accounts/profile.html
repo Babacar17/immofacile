@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}Mon profil{% endblock %}
+{% block extra_css %}
+<style>
+.profile-layout { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; padding: 40px 0 64px; }
+.profile-sidebar { position: sticky; top: calc(var(--nav-h) + 16px); }
+.profile-avatar-wrap { position: relative; width: 80px; height: 80px; margin: 0 auto 14px; }
+.profile-avatar {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-dk), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: var(--dark);
+  overflow: hidden;
+}
+.profile-avatar img { width:100%; height:100%; object-fit:cover; }
+.sidebar-nav { background: var(--surface); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,.04); }
+.sidebar-nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 13px 18px; font-size: .87rem; color: var(--mid);
+  text-decoration: none; transition: all .15s; border: none;
+  background: none; cursor: pointer; width: 100%;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-nav-item:last-child { border-bottom: none; }
+.sidebar-nav-item:hover { background: var(--cream); color: var(--ink); }
+.sidebar-nav-item.active { background: rgba(201,168,76,.08); color: var(--gold-dk); font-weight: 600; border-left: 3px solid var(--gold); }
+.sidebar-nav-icon { width: 20px; text-align: center; flex-shrink: 0; }
+.form-section { background: var(--surface); border-radius: var(--r-lg); padding: clamp(20px,4vw,32px); box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,.04); margin-bottom: 20px; }
+.form-section-title { font-family: 'Fraunces',serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+@media(max-width:768px){ .profile-layout { grid-template-columns:1fr; } .profile-sidebar { position:static; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <div class="flex-center gap-2">
+      <div class="profile-avatar" style="width:52px;height:52px;font-size:1.3rem;flex-shrink:0">
+        {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="">{% else %}{{ user.display_name|first|upper }}{% endif %}
+      </div>
+      <div>
+        <h1>{{ user.display_name }}</h1>
+        <p>{{ user.get_role_display }} {% if user.is_verified %} · <span style="color:var(--gold)">✓ Compte vérifié</span>{% endif %}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="profile-layout">
+    <!-- Sidebar -->
+    <aside class="profile-sidebar">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar">
+            {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="">{% else %}{{ user.display_name|first|upper }}{% endif %}
+          </div>
+        </div>
+        <div style="font-weight:700;font-size:.95rem;">{{ user.display_name }}</div>
+        <div style="color:var(--muted);font-size:.78rem;margin-top:3px;">{{ user.email }}</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="{% url 'accounts:profile' %}" class="sidebar-nav-item active">
+          <span class="sidebar-nav-icon">👤</span> Mon profil
+        </a>
+        {% if not user.is_tenant %}
+        <a href="{% url 'listings:my_listings' %}" class="sidebar-nav-item">
+          <span class="sidebar-nav-icon">🏠</span> Mes annonces
+        </a>
+        {% endif %}
+        <a href="{% url 'listings:favorites' %}" class="sidebar-nav-item">
+          <span class="sidebar-nav-icon">❤️</span> Mes favoris
+        </a>
+        <a href="{% url 'messaging:inbox' %}" class="sidebar-nav-item">
+          <span class="sidebar-nav-icon">💬</span> Messagerie
+          {% if unread_count %}<span class="nav-badge" style="position:static;margin-left:auto">{{ unread_count }}</span>{% endif %}
+        </a>
+        {% if user.is_tenant %}
+        <a href="{% url 'messaging:my_visits' %}" class="sidebar-nav-item">
+          <span class="sidebar-nav-icon">📅</span> Mes visites
+        </a>
+        {% else %}
+        <a href="{% url 'messaging:manage_visits' %}" class="sidebar-nav-item">
+          <span class="sidebar-nav-icon">📅</span> Gérer visites
+        </a>
+        {% endif %}
+        <a href="{% url 'accounts:logout' %}" class="sidebar-nav-item" style="color:var(--danger)">
+          <span class="sidebar-nav-icon">🚪</span> Déconnexion
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Formulaire -->
+    <div>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-section">
+          <div class="form-section-title">Informations personnelles</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Prénom</label>{{ form.first_name }}</div>
+            <div class="form-group"><label class="form-label">Nom</label>{{ form.last_name }}</div>
+          </div>
+          <div class="form-group"><label class="form-label">Email</label>{{ form.email }}</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Téléphone</label>{{ form.phone }}</div>
+            <div class="form-group"><label class="form-label">Ville</label>{{ form.city }}</div>
+          </div>
+          <div class="form-group"><label class="form-label">Biographie</label>{{ form.bio }}</div>
+          <div class="form-group">
+            <label class="form-label">Photo de profil</label>
+            {{ form.avatar }}
+            {% if user.avatar %}<div style="margin-top:8px"><img src="{{ user.avatar.url }}" style="width:56px;height:56px;border-radius:50%;object-fit:cover" alt=""></div>{% endif %}
+          </div>
+        </div>
+
+        {% if user.is_agency %}
+        <div class="form-section">
+          <div class="form-section-title">Informations agence</div>
+          <div class="form-group"><label class="form-label">Nom de l'agence</label>{{ form.agency_name }}</div>
+          <div class="form-group"><label class="form-label">Adresse</label>{{ form.agency_address }}</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Site web</label>{{ form.agency_website }}</div>
+            <div class="form-group"><label class="form-label">N° de licence</label>{{ form.agency_license }}</div>
+          </div>
+        </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">✅ Enregistrer les modifications</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

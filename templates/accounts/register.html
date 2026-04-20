@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}S'inscrire{% endblock %}
+{% block extra_css %}
+<style>
+.auth-page { min-height: calc(100dvh - 64px); display: grid; grid-template-columns: 1fr 1fr; }
+.auth-visual { background: var(--dark); display: flex; flex-direction: column; justify-content: center; padding: clamp(40px,6vw,80px); position: relative; overflow: hidden; }
+.auth-visual::before { content:''; position:absolute; inset:0; background: radial-gradient(ellipse 80% 60% at 70% 50%, rgba(201,168,76,.1) 0%, transparent 70%); pointer-events:none; }
+.auth-form-side { display:flex; align-items:flex-start; justify-content:center; padding: clamp(32px,5vw,56px) clamp(24px,4vw,48px); background: var(--cream); overflow-y: auto; }
+.auth-box { width:100%; max-width: 440px; }
+.auth-card { background: var(--surface); border-radius: var(--r-xl); padding: clamp(24px,4vw,36px); box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,.04); }
+.role-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
+.role-opt { border: 2px solid var(--border); border-radius: var(--r-md); padding: 14px 8px; text-align: center; cursor: pointer; transition: all .15s; background: var(--surface); }
+.role-opt:hover { border-color: var(--gold); }
+.role-opt.selected { border-color: var(--gold); background: rgba(201,168,76,.06); }
+.role-icon { font-size: 1.6rem; margin-bottom: 6px; }
+.role-name { font-size: .8rem; font-weight: 700; color: var(--ink); }
+.role-desc { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+@media(max-width:700px){ .auth-page { grid-template-columns:1fr; } .auth-visual { display:none; } }
+</style>
+{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-visual">
+    <div style="position:relative;z-index:1">
+      <div style="font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;color:#fff;margin-bottom:16px;">Immo<span style="color:var(--gold)">Facile</span></div>
+      <h2 style="font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.4rem,3vw,2rem);font-weight:700;line-height:1.25;margin-bottom:20px;">Rejoignez 3 800+ utilisateurs qui ont trouvé leur logement</h2>
+      <p style="color:rgba(255,255,255,.5);font-size:.88rem;line-height:1.7;">Créez votre compte gratuitement et accédez à toutes les annonces, contactez directement les propriétaires et gérez vos favoris.</p>
+    </div>
+  </div>
+  <div class="auth-form-side">
+    <div class="auth-box">
+      <a href="{% url 'listings:home' %}" style="font-family:'Fraunces',serif;font-size:1.5rem;font-weight:900;color:var(--ink);text-decoration:none;display:block;margin-bottom:28px;">Immo<em style="color:var(--gold);font-style:normal">Facile</em></a>
+      <div style="font-family:'Fraunces',serif;font-size:1.7rem;font-weight:700;margin-bottom:6px;">Créer un compte</div>
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:24px;">Inscription gratuite en moins d'une minute</p>
+
+      <!-- Rôle -->
+      <div class="role-grid" id="role-grid">
+        <div class="role-opt selected" onclick="selectRole('tenant',this)">
+          <div class="role-icon">👤</div>
+          <div class="role-name">Locataire</div>
+          <div class="role-desc">Je cherche un logement</div>
+        </div>
+        <div class="role-opt" onclick="selectRole('owner',this)">
+          <div class="role-icon">🏠</div>
+          <div class="role-name">Propriétaire</div>
+          <div class="role-desc">Je loue mon bien</div>
+        </div>
+        <div class="role-opt" onclick="selectRole('agency',this)">
+          <div class="role-icon">🏢</div>
+          <div class="role-name">Agence</div>
+          <div class="role-desc">Agence immobilière</div>
+        </div>
+      </div>
+
+      <div class="auth-card">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="role" id="role-input" value="tenant">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Prénom</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="form-error">⚠ {{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom</label>
+              {{ form.last_name }}
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom d'utilisateur</label>
+            {{ form.username }}
+            {% if form.username.errors %}<div class="form-error">⚠ {{ form.username.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            {{ form.email }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            {{ form.phone }}
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Mot de passe</label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}<div class="form-error">⚠ {{ form.password1.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+              <label class="form-label">Confirmer</label>
+              {{ form.password2 }}
+            </div>
+          </div>
+          {% if form.non_field_errors %}<div style="background:#FDECEA;border-radius:var(--r-sm);padding:10px 14px;font-size:.83rem;color:var(--danger);margin-bottom:14px;">⚠ {{ form.non_field_errors.0 }}</div>{% endif %}
+          <button type="submit" class="btn btn-primary btn-full" style="padding:13px;margin-top:4px;">Créer mon compte gratuit →</button>
+        </form>
+      </div>
+      <p style="text-align:center;margin-top:18px;font-size:.85rem;color:var(--muted);">
+        Déjà inscrit ? <a href="{% url 'accounts:login' %}" style="color:var(--gold);font-weight:700;text-decoration:none;">Se connecter</a>
+      </p>
+    </div>
+  </div>
+</div>
+<script>
+function selectRole(role, el) {
+  document.querySelectorAll('.role-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('role-input').value = role;
+}
+</script>
+{% endblock %}

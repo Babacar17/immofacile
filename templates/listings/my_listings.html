@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Mes annonces{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container">
+    <div class="flex-center justify-between">
+      <div><h1>Mes annonces</h1><p>Gérez vos biens immobiliers</p></div>
+      <a href="{% url 'listings:create' %}" class="btn btn-gold">+ Nouvelle annonce</a>
+    </div>
+  </div>
+</div>
+<div class="container" style="padding-bottom:60px">
+  {% if listings %}
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    {% for listing in listings %}
+    <div class="card" style="display:flex;gap:0;overflow:hidden;">
+      <div style="width:180px;flex-shrink:0;background:var(--border);position:relative;">
+        {% with listing.get_main_photo as photo %}
+          {% if photo %}<img src="{{ photo.image.url }}" style="width:100%;height:100%;object-fit:cover;" alt="">
+          {% else %}<div style="width:100%;height:100%;min-height:130px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:linear-gradient(135deg,#E8E0D0,#D4C9B0);">🏠</div>{% endif %}
+        {% endwith %}
+        <span class="badge {% if listing.status == 'active' %}badge-success{% elif listing.status == 'rented' %}badge-dark{% else %}badge-muted{% endif %}" style="position:absolute;top:8px;left:8px;">{{ listing.get_status_display }}</span>
+      </div>
+      <div class="card-body" style="flex:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-family:'Playfair Display',serif;font-size:1.05rem;font-weight:700;margin-bottom:4px;">{{ listing.title }}</div>
+          <div style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;">📍 {{ listing.city }} · {{ listing.get_type_display }} · {{ listing.rooms }} pièce{{ listing.rooms|pluralize }}</div>
+          <div style="font-weight:700;font-size:1.1rem;color:var(--gold);">{{ listing.price|floatformat:0 }} FCFA/mois</div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">👁 {{ listing.views_count }} vue{{ listing.views_count|pluralize }} · Publié le {{ listing.created_at|date:"d/m/Y" }}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <a href="{% url 'listings:detail' listing.pk %}" class="btn btn-dark btn-sm">Voir</a>
+          <a href="{% url 'listings:edit' listing.pk %}" class="btn btn-gold btn-sm">Modifier</a>
+          <a href="{% url 'listings:delete' listing.pk %}" class="btn btn-danger btn-sm">Supprimer</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">🏠</div>
+    <h3>Vous n'avez pas encore d'annonces</h3>
+    <p>Publiez votre premier bien immobilier</p>
+    <a href="{% url 'listings:create' %}" class="btn btn-gold mt-2">+ Publier une annonce</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

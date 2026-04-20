@@ -1,0 +1,67 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Messages & Visites{% endblock %}
+{% block topbar_title %}Messages & Visites{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Messages & Visites</h1>
+  <p>{{ msgs.count }} message{{ msgs.count|pluralize }} · {{ visits.count }} visite{{ visits.count|pluralize }}</p>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+  <!-- Messages -->
+  <div class="table-card">
+    <div class="table-header"><h3>💬 Derniers messages (100)</h3></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>De</th><th>À</th><th>Annonce</th><th>Statut</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for m in msgs %}
+          <tr>
+            <td><a href="{% url 'dashboard:user_detail' m.sender.pk %}" style="text-decoration:none;font-size:.8rem;font-weight:600;color:var(--ink)">{{ m.sender.display_name|truncatechars:14 }}</a></td>
+            <td><a href="{% url 'dashboard:user_detail' m.receiver.pk %}" style="text-decoration:none;font-size:.8rem;color:var(--body)">{{ m.receiver.display_name|truncatechars:14 }}</a></td>
+            <td class="text-xs text-muted truncate">{{ m.listing.title|default:'-'|truncatechars:18 }}</td>
+            <td>
+              <span class="badge {% if m.status == 'sent' %}badge-warning{% elif m.status == 'read' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ m.get_status_display }}
+              </span>
+            </td>
+            <td class="text-xs text-muted">{{ m.created_at|date:"d/m H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5"><div class="empty" style="padding:20px"><div class="empty-icon">💬</div>Aucun message</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Visites -->
+  <div class="table-card">
+    <div class="table-header"><h3>📅 Dernières visites (50)</h3></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Locataire</th><th>Annonce</th><th>Date</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for v in visits %}
+          <tr>
+            <td><a href="{% url 'dashboard:user_detail' v.requester.pk %}" style="text-decoration:none;font-size:.8rem;font-weight:600;color:var(--ink)">{{ v.requester.display_name|truncatechars:14 }}</a></td>
+            <td class="text-xs text-muted truncate">{{ v.listing.title|truncatechars:20 }}</td>
+            <td class="text-xs">{{ v.date|date:"d/m/Y" }}<br>{{ v.time_slot|time:"H:i" }}</td>
+            <td>
+              <span class="badge {% if v.status == 'accepted' %}badge-success{% elif v.status == 'declined' %}badge-danger{% elif v.status == 'pending' %}badge-warning{% elif v.status == 'done' %}badge-info{% else %}badge-muted{% endif %}">
+                {{ v.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4"><div class="empty" style="padding:20px"><div class="empty-icon">📅</div>Aucune visite</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

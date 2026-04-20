@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block title %}Accueil{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── HERO ── */
+.hero {
+  background: var(--dark);
+  padding: clamp(56px,10vw,100px) clamp(16px,4vw,40px) clamp(72px,12vw,120px);
+  text-align: center; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(201,168,76,.14) 0%, transparent 70%);
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: .72rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--gold); border: 1px solid rgba(201,168,76,.3);
+  padding: 5px 16px; border-radius: var(--r-full); margin-bottom: 20px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 900; color: #fff; line-height: 1.1;
+  margin-bottom: 18px;
+}
+.hero h1 em { color: var(--gold); font-style: normal; }
+.hero-sub { color: rgba(255,255,255,.55); font-size: clamp(.9rem,2vw,1.05rem); margin-bottom: 44px; max-width: 480px; margin-left:auto; margin-right:auto; }
+
+/* Search */
+.search-card {
+  background: var(--surface); border-radius: var(--r-xl);
+  padding: clamp(16px,3vw,24px); max-width: 800px; margin: 0 auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,.4);
+  display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;
+}
+@media(max-width:680px){ .search-card { grid-template-columns:1fr; } }
+.search-card .form-group { margin-bottom: 0; }
+.search-card .form-label { font-size: .73rem; color: var(--muted); margin-bottom: 5px; }
+.search-btn {
+  padding: 11px 28px; background: var(--gold); color: var(--dark);
+  border: none; border-radius: var(--r-sm); font-weight: 700;
+  font-size: .88rem; cursor: pointer; white-space: nowrap; height: 42px;
+  transition: all var(--trans);
+}
+.search-btn:hover { background: var(--gold-lt); }
+
+/* Stats */
+.stats-row {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: clamp(24px,4vw,56px);
+  padding: clamp(20px,4vw,28px) clamp(16px,4vw,40px);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.stat { text-align: center; }
+.stat-n { font-family: 'Fraunces', serif; font-size: clamp(1.4rem,3vw,1.9rem); font-weight: 700; color: var(--ink); }
+.stat-l { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+
+/* Type pills */
+.type-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.type-pill {
+  padding: 6px 16px; border-radius: var(--r-full); font-size: .8rem; font-weight: 600;
+  border: 1.5px solid var(--border); color: var(--mid); text-decoration: none;
+  transition: all .15s; background: var(--surface);
+}
+.type-pill:hover { border-color: var(--gold); color: var(--ink); }
+.type-pill.active { background: var(--ink); border-color: var(--ink); color: var(--gold); }
+.type-pill-map {
+  margin-left: auto; background: transparent;
+  border-color: var(--ink); color: var(--ink);
+}
+.type-pill-map:hover { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+
+/* CTA BAND */
+.cta-band {
+  background: linear-gradient(135deg, var(--dark) 60%, #1a1200 100%);
+  padding: clamp(48px,8vw,80px) clamp(16px,4vw,40px);
+  text-align: center; position: relative; overflow: hidden;
+}
+.cta-band::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(201,168,76,.1) 0%, transparent 70%);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">🏡 Dakar · Thiès · Saint-Louis</div>
+  <h1>Trouvez votre<br><em>logement idéal</em></h1>
+  <p class="hero-sub">Appartements, chambres et maisons — particuliers et agences réunis sur une seule plateforme</p>
+
+  <form method="get" action="{% url 'listings:home' %}">
+    <div class="search-card">
+      <div class="form-group">
+        <label class="form-label">Où cherchez-vous ?</label>
+        {{ form.q }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type de bien</label>
+        {{ form.type }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Budget max (FCFA)</label>
+        {{ form.price_max }}
+      </div>
+      <button type="submit" class="search-btn">Rechercher</button>
+    </div>
+  </form>
+</section>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat"><div class="stat-n">1 200+</div><div class="stat-l">Annonces actives</div></div>
+  <div class="stat"><div class="stat-n">48</div><div class="stat-l">Agences partenaires</div></div>
+  <div class="stat"><div class="stat-n">12</div><div class="stat-l">Villes couvertes</div></div>
+  <div class="stat"><div class="stat-n">3 800+</div><div class="stat-l">Locataires satisfaits</div></div>
+</div>
+
+<!-- FEATURED -->
+{% if featured %}
+<section class="section container">
+  <div class="section-eyebrow">Sélection premium</div>
+  <div class="flex-between mb-3">
+    <div>
+      <div class="section-title">Annonces en vedette</div>
+      <div class="divider" style="margin-bottom:0"></div>
+    </div>
+  </div>
+  <div class="grid-3">
+    {% for listing in featured %}
+    <a href="{% url 'listings:detail' listing.pk %}" class="card card-hover listing-card">
+      <div class="lc-img">
+        {% with listing.get_main_photo as p %}
+          {% if p %}<img src="{{ p.image.url }}" alt="{{ listing.title }}" loading="lazy">
+          {% else %}<div class="lc-no-photo">{% if listing.type == 'house' %}🏡{% elif listing.type == 'room' %}🛏{% elif listing.type == 'villa' %}🏰{% else %}🏢{% endif %}</div>{% endif %}
+        {% endwith %}
+        <span class="badge badge-gold badge-absolute">⭐ Vedette</span>
+        {% if user.is_authenticated %}
+          <a href="{% url 'listings:toggle_favorite' listing.pk %}" class="fav-btn" title="Favori" onclick="event.preventDefault();event.stopPropagation();fetch(this.href).then(()=>this.textContent=this.textContent=='🤍'?'❤️':'🤍')">🤍</a>
+        {% endif %}
+      </div>
+      <div class="lc-body">
+        <div class="lc-price">{{ listing.price|floatformat:0 }} FCFA <small>/mois</small></div>
+        <div class="lc-title">{{ listing.title }}</div>
+        <div class="lc-location">📍 {{ listing.neighborhood|default:'' }}{% if listing.neighborhood %}, {% endif %}{{ listing.city }}</div>
+        <div class="lc-meta">
+          <span class="lc-meta-item">🛏 {{ listing.rooms }}p</span>
+          {% if listing.surface %}<span class="lc-meta-item">📐 {{ listing.surface }}m²</span>{% endif %}
+          <span class="lc-meta-item">{{ listing.get_type_display }}</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- RECENT -->
+<section class="section container" style="padding-top:{% if featured %}0{% else %}56px{% endif %}">
+  <div class="flex-between flex-wrap mb-3" style="gap:12px">
+    <div>
+      <div class="section-title">Annonces récentes</div>
+      <div class="divider" style="margin-bottom:0"></div>
+    </div>
+    <a href="{% url 'listings:home' %}" class="btn btn-outline btn-sm">Voir tout →</a>
+  </div>
+
+  <div class="type-pills">
+    <a href="{% url 'listings:home' %}" class="type-pill {% if not request.GET.type %}active{% endif %}">Tous</a>
+    <a href="?type=apartment" class="type-pill {% if request.GET.type == 'apartment' %}active{% endif %}">Appartements</a>
+    <a href="?type=house"     class="type-pill {% if request.GET.type == 'house'     %}active{% endif %}">Maisons</a>
+    <a href="?type=room"      class="type-pill {% if request.GET.type == 'room'      %}active{% endif %}">Chambres</a>
+    <a href="?type=studio"    class="type-pill {% if request.GET.type == 'studio'    %}active{% endif %}">Studios</a>
+    <a href="?type=villa"     class="type-pill {% if request.GET.type == 'villa'     %}active{% endif %}">Villas</a>
+    <a href="{% url 'listings:map' %}" class="type-pill type-pill-map">🗺 Carte</a>
+  </div>
+
+  {% if recent %}
+  <div class="grid-3">
+    {% for listing in recent %}
+    <a href="{% url 'listings:detail' listing.pk %}" class="card card-hover listing-card">
+      <div class="lc-img">
+        {% with listing.get_main_photo as p %}
+          {% if p %}<img src="{{ p.image.url }}" alt="{{ listing.title }}" loading="lazy">
+          {% else %}<div class="lc-no-photo">{% if listing.type == 'house' %}🏡{% elif listing.type == 'room' %}🛏{% elif listing.type == 'villa' %}🏰{% else %}🏢{% endif %}</div>{% endif %}
+        {% endwith %}
+        <span class="badge badge-dark badge-absolute">{% if listing.owner.is_agency %}🏢 Agence{% else %}👤 Particulier{% endif %}</span>
+        {% if user.is_authenticated %}
+          <a href="{% url 'listings:toggle_favorite' listing.pk %}" class="fav-btn" title="Favori" onclick="event.preventDefault();event.stopPropagation();">🤍</a>
+        {% endif %}
+      </div>
+      <div class="lc-body">
+        <div class="lc-price">{{ listing.price|floatformat:0 }} FCFA <small>/mois</small></div>
+        <div class="lc-title">{{ listing.title }}</div>
+        <div class="lc-location">📍 {{ listing.neighborhood|default:'' }}{% if listing.neighborhood %}, {% endif %}{{ listing.city }}</div>
+        <div class="lc-meta">
+          <span class="lc-meta-item">🛏 {{ listing.rooms }}p</span>
+          {% if listing.bathrooms %}<span class="lc-meta-item">🚿 {{ listing.bathrooms }}</span>{% endif %}
+          {% if listing.surface %}<span class="lc-meta-item">📐 {{ listing.surface }}m²</span>{% endif %}
+          {% if listing.furnished %}<span class="lc-meta-item">🛋 Meublé</span>{% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">🔍</div>
+    <h3>Aucune annonce trouvée</h3>
+    <p>Essayez avec d'autres critères de recherche.</p>
+    <a href="{% url 'listings:home' %}" class="btn btn-primary">Voir toutes les annonces</a>
+  </div>
+  {% endif %}
+</section>
+
+<!-- CTA BAND -->
+{% if not user.is_authenticated or user.is_tenant %}
+<section class="cta-band">
+  <div style="position:relative;z-index:1">
+    <div class="section-eyebrow" style="justify-content:center;display:flex">Propriétaires & Agences</div>
+    <h2 style="font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.6rem,4vw,2.6rem);font-weight:900;margin-bottom:14px;">Publiez votre bien gratuitement</h2>
+    <p style="color:rgba(255,255,255,.5);margin-bottom:32px;max-width:460px;margin-left:auto;margin-right:auto;font-size:.95rem;">Rejoignez des centaines de propriétaires qui font confiance à ImmoFacile pour louer rapidement.</p>
+    <a href="{% url 'accounts:register' %}" class="btn btn-primary btn-lg">Commencer maintenant →</a>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

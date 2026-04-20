@@ -1,0 +1,58 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Logs système{% endblock %}
+{% block topbar_title %}Logs système{% endblock %}
+
+{% block extra_css %}
+<style>
+.log-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.log-tab{padding:7px 16px;border-radius:var(--r-sm);font-size:.8rem;font-weight:600;text-decoration:none;border:1.5px solid var(--border);color:var(--mid);transition:all var(--trans)}
+.log-tab:hover{border-color:var(--gold);color:var(--gold-dk)}
+.log-tab.active{background:var(--ink);border-color:var(--ink);color:var(--gold)}
+.log-wrap{background:#0E1117;border-radius:var(--r-lg);padding:0;overflow:hidden;box-shadow:var(--shadow-lg)}
+.log-header{padding:12px 18px;background:#161B22;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between}
+.log-filename{font-size:.8rem;font-weight:600;color:rgba(255,255,255,.6);font-family:monospace}
+.log-count{font-size:.72rem;color:rgba(255,255,255,.3)}
+.log-body{max-height:600px;overflow-y:auto;padding:12px 0}
+.log-line{padding:3px 18px;font-family:'Courier New',monospace;font-size:.75rem;line-height:1.6;white-space:pre-wrap;word-break:break-all;color:rgba(255,255,255,.55);border-bottom:1px solid rgba(255,255,255,.03)}
+.log-line:hover{background:rgba(255,255,255,.04)}
+.log-line.error,.log-line.critical{color:#ff6b6b;background:rgba(255,50,50,.04)}
+.log-line.warning{color:#feca57}
+.log-line.info{color:rgba(255,255,255,.65)}
+.log-line.debug{color:rgba(255,255,255,.35)}
+.log-empty{text-align:center;padding:48px;color:rgba(255,255,255,.3)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Logs système</h1>
+  <p>200 dernières lignes · Rotation automatique quotidienne</p>
+</div>
+
+<div class="log-tabs">
+  <a href="?type=app"      class="log-tab {% if log_type == 'app'      %}active{% endif %}">📋 Application</a>
+  <a href="?type=errors"   class="log-tab {% if log_type == 'errors'   %}active{% endif %}">❌ Erreurs</a>
+  <a href="?type=requests" class="log-tab {% if log_type == 'requests' %}active{% endif %}">🌐 Requêtes HTTP</a>
+  <a href="?type=security" class="log-tab {% if log_type == 'security' %}active{% endif %}">🔒 Sécurité</a>
+</div>
+
+<div class="log-wrap">
+  <div class="log-header">
+    <span class="log-filename">{{ filename }}</span>
+    <span class="log-count">{{ lines|length }} ligne{{ lines|length|pluralize }}</span>
+  </div>
+  <div class="log-body">
+    {% if lines %}
+      {% for line in lines %}
+      <div class="log-line
+        {% if 'ERROR' in line or 'CRITICAL' in line %}error
+        {% elif 'WARNING' in line %}warning
+        {% elif 'DEBUG' in line %}debug
+        {% else %}info{% endif %}">{{ line }}</div>
+      {% endfor %}
+    {% else %}
+      <div class="log-empty">Aucun log disponible pour {{ filename }}<br><small>Les logs apparaîtront ici dès la première requête.</small></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

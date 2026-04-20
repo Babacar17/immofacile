@@ -1,0 +1,67 @@
+# ════════════════════════════════════════════════════
+#  render.yaml — Configuration Render.com pour ImmoFacile
+#  Ce fichier est lu automatiquement par Render
+# ════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: immofacile
+    env: python
+    region: frankfurt          # Europe — proche Afrique de l'Ouest
+    plan: free
+
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --no-input &&
+      python manage.py migrate
+
+    startCommand: >-
+      gunicorn immofacile.wsgi:application
+      --bind 0.0.0.0:$PORT
+      --workers 2
+      --timeout 120
+      --log-level warning
+
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: immofacile.settings_production
+      - key: SECRET_KEY
+        generateValue: true          # Render génère automatiquement
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # ALLOWED_HOSTS : sera mis à jour après le premier déploiement
+      - key: ALLOWED_HOSTS
+        value: "immofacile.onrender.com"
+      # Base de données — liée automatiquement depuis le service PostgreSQL
+      - key: DB_NAME
+        fromDatabase:
+          name: immofacile-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: immofacile-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: immofacile-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: immofacile-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: immofacile-db
+          property: port
+
+    healthCheckPath: /
+
+# ── Base de données PostgreSQL gratuite ──────────────────────────────────────
+databases:
+  - name: immofacile-db
+    databaseName: immofacile
+    user: immofacile_user
+    region: frankfurt
+    plan: free                 # Gratuit 90 jours puis ~7$/mois

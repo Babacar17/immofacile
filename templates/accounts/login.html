@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Connexion{% endblock %}
+{% block extra_css %}
+<style>
+.auth-page { min-height: calc(100dvh - 64px); display: grid; grid-template-columns: 1fr 1fr; }
+.auth-visual {
+  background: var(--dark); display: flex; flex-direction: column;
+  justify-content: center; padding: clamp(40px,6vw,80px);
+  position: relative; overflow: hidden;
+}
+.auth-visual::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 80% 60% at 30% 50%, rgba(201,168,76,.1) 0%, transparent 70%);
+}
+.auth-form-side {
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(32px,5vw,64px) clamp(24px,4vw,48px);
+  background: var(--cream);
+}
+.auth-box { width: 100%; max-width: 400px; }
+.auth-logo { font-family: 'Fraunces',serif; font-size: 1.6rem; font-weight: 900; color: var(--ink); text-decoration: none; display: block; margin-bottom: 32px; }
+.auth-logo em { color: var(--gold); font-style: normal; }
+.auth-title { font-family: 'Fraunces',serif; font-size: 1.8rem; font-weight: 700; margin-bottom: 6px; }
+.auth-sub { color: var(--muted); font-size: .88rem; margin-bottom: 28px; }
+.auth-card { background: var(--surface); border-radius: var(--r-xl); padding: clamp(24px,4vw,36px); box-shadow: var(--shadow-lg); border: 1px solid rgba(0,0,0,.04); }
+.divider-text { text-align:center; color: var(--muted); font-size: .78rem; margin: 20px 0; position: relative; }
+.divider-text::before, .divider-text::after { content:''; position:absolute; top:50%; width: calc(50% - 28px); height:1px; background: var(--border); }
+.divider-text::before { left:0; } .divider-text::after { right:0; }
+@media(max-width:700px){ .auth-page { grid-template-columns:1fr; } .auth-visual { display:none; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <!-- Visual side -->
+  <div class="auth-visual">
+    <div style="position:relative;z-index:1">
+      <div style="font-family:'Fraunces',serif;font-size:2.2rem;font-weight:900;color:#fff;margin-bottom:16px;">Immo<span style="color:var(--gold)">Facile</span></div>
+      <h2 style="font-family:'Fraunces',serif;color:#fff;font-size:clamp(1.5rem,3vw,2rem);font-weight:700;line-height:1.2;margin-bottom:20px;">Votre logement idéal, en quelques clics</h2>
+      <p style="color:rgba(255,255,255,.5);font-size:.9rem;line-height:1.7;margin-bottom:40px;">Appartements, maisons, chambres — directement auprès de propriétaires et agences vérifiées au Sénégal.</p>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        {% for feat in "123" %}{% if forloop.first %}
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.65);font-size:.85rem;"><span style="width:28px;height:28px;background:rgba(201,168,76,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">✓</span>1 200+ annonces actives</div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.65);font-size:.85rem;"><span style="width:28px;height:28px;background:rgba(201,168,76,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">✓</span>Agences vérifiées</div>
+        <div style="display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.65);font-size:.85rem;"><span style="width:28px;height:28px;background:rgba(201,168,76,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">✓</span>Contact direct propriétaire</div>
+        {% endif %}{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Form side -->
+  <div class="auth-form-side">
+    <div class="auth-box">
+      <a href="{% url 'listings:home' %}" class="auth-logo">Immo<em>Facile</em></a>
+      <div class="auth-title">Bon retour 👋</div>
+      <div class="auth-sub">Connectez-vous à votre compte</div>
+      <div class="auth-card">
+        <form method="post">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label">Nom d'utilisateur</label>
+            {{ form.username }}
+            {% if form.username.errors %}<div class="form-error">⚠ {{ form.username.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mot de passe</label>
+            {{ form.password }}
+          </div>
+          {% if form.non_field_errors %}
+          <div style="background:#FDECEA;border-radius:var(--r-sm);padding:10px 14px;font-size:.83rem;color:var(--danger);margin-bottom:14px;">⚠ {{ form.non_field_errors.0 }}</div>
+          {% endif %}
+          <button type="submit" class="btn btn-primary btn-full" style="padding:13px;">Se connecter →</button>
+        </form>
+      </div>
+      <p style="text-align:center;margin-top:20px;font-size:.85rem;color:var(--muted);">
+        Pas encore de compte ?
+        <a href="{% url 'accounts:register' %}" style="color:var(--gold);font-weight:700;text-decoration:none;">Créer un compte</a>
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

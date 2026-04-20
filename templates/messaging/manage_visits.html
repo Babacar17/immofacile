@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Gérer les visites{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="container"><h1>Gérer les visites</h1><p>Acceptez ou refusez les demandes de visite</p></div>
+</div>
+<div class="container" style="padding-bottom:60px">
+  {% if visits %}
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    {% for visit in visits %}
+    <div class="card card-body" style="cursor:default;">
+      <div class="flex-center justify-between gap-2" style="flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700;font-size:0.95rem;">{{ visit.requester.display_name }}</div>
+          <a href="{% url 'listings:detail' visit.listing.pk %}" style="color:var(--gold);font-size:0.85rem;text-decoration:none;">{{ visit.listing.title }} ↗</a>
+          <div style="color:var(--muted);font-size:0.82rem;margin-top:4px;">🗓 {{ visit.date|date:"d/m/Y" }} à {{ visit.time_slot|time:"H:i" }}</div>
+          {% if visit.note %}<div style="color:var(--mid);font-size:0.82rem;margin-top:6px;font-style:italic;">« {{ visit.note }} »</div>{% endif %}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+          <span style="padding:4px 12px;border-radius:20px;font-size:0.72rem;font-weight:700;
+            {% if visit.status == 'pending' %}background:rgba(201,168,76,0.12);color:var(--gold)
+            {% elif visit.status == 'accepted' %}background:#EAF6EE;color:var(--success)
+            {% elif visit.status == 'declined' %}background:#FDECEA;color:var(--danger)
+            {% else %}background:var(--cream);color:var(--mid){% endif %}">
+            {{ visit.get_status_display }}
+          </span>
+          {% if visit.status == 'pending' %}
+          <a href="{% url 'messaging:update_visit' visit.pk 'accepted' %}" class="btn btn-sm" style="background:#EAF6EE;color:var(--success);border:none;">✓ Accepter</a>
+          <a href="{% url 'messaging:update_visit' visit.pk 'declined' %}" class="btn btn-sm" style="background:#FDECEA;color:var(--danger);border:none;">✗ Refuser</a>
+          {% elif visit.status == 'accepted' %}
+          <a href="{% url 'messaging:update_visit' visit.pk 'done' %}" class="btn btn-dark btn-sm">Marquer effectuée</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="icon">📅</div>
+    <h3>Aucune demande de visite reçue</h3>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

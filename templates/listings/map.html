@@ -1,0 +1,537 @@
+{% extends 'base.html' %}
+{% block title %}Carte des annonces{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  /* ── LAYOUT CARTE ── */
+  .map-page {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 64px);
+    overflow: hidden;
+  }
+
+  /* ── PANNEAU LATÉRAL ── */
+  .map-sidebar {
+    display: flex;
+    flex-direction: column;
+    background: var(--white);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sidebar-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem; font-weight: 700; margin-bottom: 14px;
+  }
+
+  /* Barre de recherche inline */
+  .map-search-bar {
+    display: flex; gap: 8px;
+  }
+  .map-search-bar input,
+  .map-search-bar select {
+    flex: 1; padding: 8px 12px;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 0.82rem; font-family: 'DM Sans', sans-serif;
+    outline: none; color: var(--ink);
+    transition: border-color 0.2s;
+  }
+  .map-search-bar input:focus,
+  .map-search-bar select:focus { border-color: var(--gold); }
+  .map-search-bar button {
+    padding: 8px 14px; background: var(--gold); color: var(--dark);
+    border: none; border-radius: 8px; font-weight: 700;
+    font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .map-search-bar button:hover { background: var(--gold-lt); }
+
+  /* Filtres rapides */
+  .type-filters {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px;
+  }
+  .type-filter {
+    padding: 4px 12px; border-radius: 16px; font-size: 0.75rem;
+    font-weight: 600; border: 1.5px solid var(--border);
+    color: var(--mid); cursor: pointer; background: none;
+    transition: all 0.15s;
+  }
+  .type-filter:hover { border-color: var(--gold); color: var(--dark); }
+  .type-filter.active { background: var(--gold); border-color: var(--gold); color: var(--dark); }
+
+  /* Compteur résultats */
+  .results-count {
+    padding: 10px 20px;
+    font-size: 0.78rem; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--cream);
+  }
+  .results-count strong { color: var(--ink); }
+
+  /* Liste des annonces */
+  .map-listings {
+    flex: 1; overflow-y: auto;
+    padding: 0;
+  }
+  .map-listing-item {
+    display: flex; gap: 0; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    text-decoration: none; color: inherit;
+  }
+  .map-listing-item:hover { background: var(--cream); }
+  .map-listing-item.highlighted { background: rgba(201,168,76,0.08); border-left: 3px solid var(--gold); }
+  .map-listing-item .thumb {
+    width: 90px; height: 80px; flex-shrink: 0;
+    background: var(--border); object-fit: cover;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; color: var(--muted);
+  }
+  .map-listing-item .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .map-listing-item .info { padding: 10px 14px; flex: 1; min-width: 0; }
+  .map-listing-item .info .price {
+    font-weight: 700; font-size: 0.92rem; color: var(--ink);
+    font-family: 'Playfair Display', serif;
+  }
+  .map-listing-item .info .title {
+    font-size: 0.82rem; font-weight: 600; margin: 3px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .map-listing-item .info .location {
+    font-size: 0.74rem; color: var(--muted);
+  }
+  .map-listing-item .info .meta {
+    font-size: 0.72rem; color: var(--mid); margin-top: 4px;
+  }
+
+  /* Annonces sans coords */
+  .no-coords-section {
+    padding: 12px 20px 6px;
+    font-size: 0.75rem; color: var(--muted);
+    border-top: 1px dashed var(--border);
+  }
+
+  /* ── CARTE ── */
+  #map {
+    flex: 1; z-index: 1;
+  }
+
+  /* Marqueurs personnalisés */
+  .marker-pin {
+    background: var(--dark);
+    color: var(--white);
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    position: relative;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .marker-pin::after {
+    content: '';
+    position: absolute; bottom: -7px; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--dark);
+    border-bottom: none;
+  }
+  .marker-pin.featured {
+    background: var(--gold); color: var(--dark);
+  }
+  .marker-pin.featured::after { border-top-color: var(--gold); }
+  .marker-pin.agency {
+    background: #0F3460; color: var(--white);
+  }
+  .marker-pin.agency::after { border-top-color: #0F3460; }
+  .marker-pin.active, .marker-pin:hover {
+    background: var(--gold); color: var(--dark);
+    transform: scale(1.1);
+    z-index: 999;
+  }
+  .marker-pin.active::after, .marker-pin:hover::after { border-top-color: var(--gold); }
+
+  /* Popup Leaflet */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+    padding: 0 !important;
+    overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .leaflet-popup-content { margin: 0 !important; width: 260px !important; }
+  .leaflet-popup-tip-container { display: none; }
+  .popup-img {
+    width: 100%; height: 140px; object-fit: cover;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; color: var(--muted);
+  }
+  .popup-img img { width: 100%; height: 100%; object-fit: cover; }
+  .popup-body { padding: 14px 16px; }
+  .popup-price {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem; font-weight: 700; color: var(--ink);
+  }
+  .popup-price small { font-family: 'DM Sans',sans-serif; font-size:0.72rem; font-weight:400; color:var(--muted); }
+  .popup-title { font-size: 0.88rem; font-weight: 600; margin: 4px 0; }
+  .popup-location { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; }
+  .popup-meta { display: flex; gap: 10px; font-size: 0.75rem; color: var(--mid); margin-bottom: 12px; }
+  .popup-btn {
+    display: block; width: 100%; padding: 9px;
+    background: var(--gold); color: var(--dark);
+    border: none; border-radius: 8px; font-weight: 700;
+    font-size: 0.82rem; text-align: center;
+    text-decoration: none; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .popup-btn:hover { background: var(--gold-lt); }
+
+  /* Contrôles carte custom */
+  .map-controls {
+    position: absolute; top: 16px; right: 16px; z-index: 500;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .map-ctrl-btn {
+    background: var(--white); border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    color: var(--ink); transition: all 0.15s; white-space: nowrap;
+  }
+  .map-ctrl-btn:hover { background: var(--gold); color: var(--dark); }
+  .map-ctrl-btn.active { background: var(--gold); color: var(--dark); }
+
+  /* Badge compteur sur la carte */
+  .map-badge {
+    position: absolute; bottom: 20px; left: 50%;
+    transform: translateX(-50%); z-index: 500;
+    background: var(--dark); color: var(--white);
+    padding: 8px 20px; border-radius: 20px; font-size: 0.8rem;
+    font-weight: 600; box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    pointer-events: none;
+  }
+  .map-badge span { color: var(--gold); }
+
+  @media(max-width: 768px) {
+    .map-page { grid-template-columns: 1fr; grid-template-rows: 45vh 55vh; }
+    .map-sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .map-listings { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+    .map-listing-item { min-width: 240px; flex-direction: column; border-bottom: none; border-right: 1px solid var(--border); }
+    .map-listing-item .thumb { width: 100%; height: 100px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-page">
+
+  <!-- ── PANNEAU GAUCHE ── -->
+  <aside class="map-sidebar">
+    <div class="sidebar-header">
+      <h2>🗺 Carte des annonces</h2>
+      <form method="get" action="{% url 'listings:map' %}" id="map-filter-form">
+        <div class="map-search-bar">
+          <input type="text" name="q" placeholder="Quartier, ville..." value="{{ request.GET.q }}">
+          <select name="type" onchange="this.form.submit()">
+            <option value="">Tous types</option>
+            <option value="apartment" {% if request.GET.type == 'apartment' %}selected{% endif %}>Appartement</option>
+            <option value="house"     {% if request.GET.type == 'house'     %}selected{% endif %}>Maison</option>
+            <option value="room"      {% if request.GET.type == 'room'      %}selected{% endif %}>Chambre</option>
+            <option value="studio"    {% if request.GET.type == 'studio'    %}selected{% endif %}>Studio</option>
+            <option value="villa"     {% if request.GET.type == 'villa'     %}selected{% endif %}>Villa</option>
+          </select>
+          <button type="submit">OK</button>
+        </div>
+        <div class="type-filters">
+          <button type="button" class="type-filter {% if not request.GET.type %}active{% endif %}"
+                  onclick="filterByType('')">Tous</button>
+          <button type="button" class="type-filter {% if request.GET.type == 'apartment' %}active{% endif %}"
+                  onclick="filterByType('apartment')">Appartements</button>
+          <button type="button" class="type-filter {% if request.GET.type == 'house' %}active{% endif %}"
+                  onclick="filterByType('house')">Maisons</button>
+          <button type="button" class="type-filter {% if request.GET.type == 'room' %}active{% endif %}"
+                  onclick="filterByType('room')">Chambres</button>
+          <button type="button" class="type-filter {% if request.GET.type == 'villa' %}active{% endif %}"
+                  onclick="filterByType('villa')">Villas</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="results-count">
+      <strong id="visible-count">{{ all_listings.count }}</strong> annonce{{ all_listings.count|pluralize }} ·
+      <strong>{{ mapped.count }}</strong> sur la carte
+    </div>
+
+    <div class="map-listings" id="listings-list">
+      {% for listing in mapped %}
+      <a href="{{ listing.get_absolute_url }}"
+         class="map-listing-item"
+         id="list-item-{{ listing.pk }}"
+         data-id="{{ listing.pk }}"
+         onmouseenter="highlightMarker({{ listing.pk }})"
+         onmouseleave="unhighlightMarker({{ listing.pk }})">
+        <div class="thumb">
+          {% with listing.get_main_photo as photo %}
+            {% if photo %}<img src="{{ photo.image.url }}" alt="{{ listing.title }}">
+            {% else %}
+              {% if listing.type == 'house' %}🏡{% elif listing.type == 'room' %}🛏{% elif listing.type == 'villa' %}🏰{% else %}🏢{% endif %}
+            {% endif %}
+          {% endwith %}
+        </div>
+        <div class="info">
+          <div class="price">{{ listing.price|floatformat:0 }} FCFA <small style="font-family:'DM Sans';font-size:0.7rem;font-weight:400;color:var(--muted)">/mois</small></div>
+          <div class="title">{{ listing.title }}</div>
+          <div class="location">📍 {{ listing.neighborhood|default:listing.city }}</div>
+          <div class="meta">🛏 {{ listing.rooms }}p {% if listing.surface %}· 📐 {{ listing.surface }}m²{% endif %}</div>
+        </div>
+      </a>
+      {% endfor %}
+
+      {% if unmapped %}
+      <div class="no-coords-section">
+        📍 {{ unmapped.count }} annonce{{ unmapped.count|pluralize }} sans coordonnées
+      </div>
+      {% for listing in unmapped %}
+      <a href="{{ listing.get_absolute_url }}" class="map-listing-item" style="opacity:0.7">
+        <div class="thumb">
+          {% with listing.get_main_photo as photo %}
+            {% if photo %}<img src="{{ photo.image.url }}" alt="">
+            {% else %}🏠{% endif %}
+          {% endwith %}
+        </div>
+        <div class="info">
+          <div class="price">{{ listing.price|floatformat:0 }} FCFA</div>
+          <div class="title">{{ listing.title }}</div>
+          <div class="location">📍 {{ listing.city }} <span style="color:var(--muted)">(pas de coords)</span></div>
+        </div>
+      </a>
+      {% endfor %}
+      {% endif %}
+
+      {% if not all_listings %}
+      <div style="padding:48px 24px;text-align:center;color:var(--muted);">
+        <div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>
+        <div style="font-weight:600;margin-bottom:6px;color:var(--mid);">Aucune annonce trouvée</div>
+        <div style="font-size:0.82rem;">Essayez avec d'autres filtres</div>
+      </div>
+      {% endif %}
+    </div>
+  </aside>
+
+  <!-- ── CARTE ── -->
+  <div style="position:relative;flex:1;">
+    <div id="map"></div>
+
+    <!-- Contrôles -->
+    <div class="map-controls">
+      <button class="map-ctrl-btn" onclick="centerOnDakar()" title="Recentrer sur Dakar">
+        🎯 Dakar
+      </button>
+      <button class="map-ctrl-btn" id="cluster-btn" onclick="toggleClusters()" title="Grouper les marqueurs">
+        🔵 Grouper
+      </button>
+      <a href="{% url 'listings:home' %}" class="map-ctrl-btn" style="text-decoration:none;text-align:center;">
+        ☰ Liste
+      </a>
+    </div>
+
+    <!-- Badge compteur -->
+    <div class="map-badge" id="map-badge">
+      <span id="marker-count">{{ mapped.count }}</span> annonce{{ mapped.count|pluralize }} sur la carte
+    </div>
+  </div>
+
+</div>
+
+<!-- Données JSON pour Leaflet -->
+{{ mapped|json_script:"listings-data-raw" }}
+<script>
+// Données annonces pour JS
+const LISTINGS_GEO = [
+  {% for listing in mapped %}
+  {
+    id:           {{ listing.pk }},
+    lat:          {{ listing.latitude }},
+    lng:          {{ listing.longitude }},
+    title:        "{{ listing.title|escapejs }}",
+    price:        "{{ listing.price|floatformat:0 }}",
+    type:         "{{ listing.get_type_display }}",
+    type_key:     "{{ listing.type }}",
+    city:         "{{ listing.city|escapejs }}",
+    neighborhood: "{{ listing.neighborhood|escapejs }}",
+    rooms:        {{ listing.rooms }},
+    surface:      {% if listing.surface %}{{ listing.surface }}{% else %}null{% endif %},
+    furnished:    {{ listing.furnished|yesno:"true,false" }},
+    url:          "{{ listing.get_absolute_url }}",
+    photo:        {% with listing.get_main_photo as p %}{% if p %}"{{ p.image.url }}"{% else %}null{% endif %}{% endwith %},
+    is_featured:  {{ listing.is_featured|yesno:"true,false" }},
+    is_agency:    {{ listing.owner.is_agency|yesno:"true,false" }},
+  },
+  {% endfor %}
+];
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── INIT CARTE ──────────────────────────────────────────────────────────────
+const map = L.map('map', {
+  center:  [14.6928, -17.4467],   // Dakar
+  zoom:    12,
+  zoomControl: true,
+});
+
+// Tuile OpenStreetMap (gratuit, pas de clé API)
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+  maxZoom: 19,
+}).addTo(map);
+
+// ── MARQUEURS ───────────────────────────────────────────────────────────────
+const markers = {};   // id → marker Leaflet
+const popupCache = {};
+
+function formatPrice(p) {
+  return parseInt(p).toLocaleString('fr-FR') + ' FCFA';
+}
+
+function makeIcon(listing) {
+  const cls = listing.is_featured ? 'featured' : listing.is_agency ? 'agency' : '';
+  const html = `<div class="marker-pin ${cls}" id="marker-${listing.id}">${formatPrice(listing.price)}</div>`;
+  return L.divIcon({ html, className: '', iconAnchor: [0, 32] });
+}
+
+function makePopup(l) {
+  const photo = l.photo
+    ? `<img src="${l.photo}" style="width:100%;height:140px;object-fit:cover;">`
+    : `<div class="popup-img">${l.type_key === 'house' ? '🏡' : l.type_key === 'room' ? '🛏' : l.type_key === 'villa' ? '🏰' : '🏢'}</div>`;
+
+  const badge = l.is_featured
+    ? `<span style="font-size:0.68rem;background:rgba(201,168,76,0.15);color:#8A6800;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:6px;">⭐ Vedette</span>`
+    : l.is_agency
+    ? `<span style="font-size:0.68rem;background:#E8EEF6;color:#0F3460;padding:2px 8px;border-radius:10px;font-weight:700;margin-left:6px;">🏢 Agence</span>`
+    : '';
+
+  return `
+    <div>
+      ${photo}
+      <div class="popup-body">
+        <div class="popup-price">${formatPrice(l.price)} <small>/mois</small>${badge}</div>
+        <div class="popup-title">${l.title}</div>
+        <div class="popup-location">📍 ${l.neighborhood || l.city}</div>
+        <div class="popup-meta">
+          <span>🛏 ${l.rooms} pièce${l.rooms > 1 ? 's' : ''}</span>
+          ${l.surface ? `<span>📐 ${l.surface} m²</span>` : ''}
+          ${l.furnished ? '<span>🛋 Meublé</span>' : ''}
+        </div>
+        <a href="${l.url}" class="popup-btn">Voir l'annonce →</a>
+      </div>
+    </div>`;
+}
+
+// Créer tous les marqueurs
+LISTINGS_GEO.forEach(listing => {
+  const marker = L.marker([listing.lat, listing.lng], { icon: makeIcon(listing) })
+    .addTo(map)
+    .bindPopup(makePopup(listing), {
+      maxWidth: 260, minWidth: 260,
+      closeButton: false,
+      offset: [0, -10],
+    });
+
+  marker.on('click', () => {
+    // Mettre en évidence dans la liste
+    document.querySelectorAll('.map-listing-item').forEach(el => el.classList.remove('highlighted'));
+    const item = document.getElementById(`list-item-${listing.id}`);
+    if (item) {
+      item.classList.add('highlighted');
+      item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    // Activer le marqueur
+    document.querySelectorAll('.marker-pin').forEach(el => el.classList.remove('active'));
+    const pin = document.getElementById(`marker-${listing.id}`);
+    if (pin) pin.classList.add('active');
+  });
+
+  marker.on('popupclose', () => {
+    const pin = document.getElementById(`marker-${listing.id}`);
+    if (pin) pin.classList.remove('active');
+  });
+
+  markers[listing.id] = marker;
+});
+
+// Adapter le zoom si des marqueurs existent
+if (LISTINGS_GEO.length > 0) {
+  const group = L.featureGroup(Object.values(markers));
+  map.fitBounds(group.getBounds().pad(0.15));
+}
+
+// ── INTERACTIONS LISTE ↔ CARTE ───────────────────────────────────────────────
+function highlightMarker(id) {
+  const pin = document.getElementById(`marker-${id}`);
+  if (pin) pin.classList.add('active');
+}
+function unhighlightMarker(id) {
+  const pin = document.getElementById(`marker-${id}`);
+  if (pin && !markers[id]?.getPopup()?.isOpen()) pin.classList.remove('active');
+}
+
+// Clic sur liste → centrer carte et ouvrir popup
+document.querySelectorAll('.map-listing-item[data-id]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    const id = parseInt(el.dataset.id);
+    const marker = markers[id];
+    if (marker) {
+      map.setView(marker.getLatLng(), 15, { animate: true });
+      marker.openPopup();
+    }
+  });
+});
+
+// ── CONTRÔLES ───────────────────────────────────────────────────────────────
+function centerOnDakar() {
+  map.setView([14.6928, -17.4467], 12, { animate: true });
+}
+
+function filterByType(type) {
+  const url = new URL(window.location.href);
+  if (type) url.searchParams.set('type', type);
+  else url.searchParams.delete('type');
+  window.location.href = url.toString();
+}
+
+let clusterMode = false;
+function toggleClusters() {
+  // Basculer le groupement — simple toggle d'opacité pour la démo
+  clusterMode = !clusterMode;
+  const btn = document.getElementById('cluster-btn');
+  btn.classList.toggle('active', clusterMode);
+  btn.textContent = clusterMode ? '🔵 Dégrouper' : '🔵 Grouper';
+  // Note : pour un vrai clustering, ajouter leaflet.markercluster
+}
+
+// Adapter le badge quand la carte se déplace
+map.on('moveend', () => {
+  const bounds = map.getBounds();
+  let visible = 0;
+  LISTINGS_GEO.forEach(l => {
+    if (bounds.contains([l.lat, l.lng])) visible++;
+  });
+  document.getElementById('marker-count').textContent = visible;
+});
+</script>
+{% endblock %}

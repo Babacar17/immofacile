@@ -1,0 +1,23 @@
+{% extends 'dashboard/base_dashboard.html' %}
+{% block title %}Confirmation{% endblock %}
+{% block topbar_title %}Confirmation{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:48px auto">
+  <div class="table-card" style="padding:36px;text-align:center">
+    <div style="font-size:3rem;margin-bottom:16px">{% if danger %}🗑{% else %}❓{% endif %}</div>
+    <h2 style="font-family:'Fraunces',serif;font-size:1.3rem;font-weight:700;margin-bottom:10px">{{ title }}</h2>
+    <p style="color:var(--mid);font-size:.88rem;line-height:1.6;margin-bottom:28px">{{ message }}</p>
+    {% if danger %}<p style="color:var(--danger);font-size:.8rem;font-weight:600;margin-bottom:24px">⚠️ Cette action est irréversible.</p>{% endif %}
+    <div class="flex-center" style="justify-content:center;gap:12px">
+      <a href="{{ back_url }}" class="btn btn-ghost">Annuler</a>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn {% if danger %}btn-danger{% else %}btn-primary{% endif %}">
+          {% if danger %}Confirmer la suppression{% else %}Confirmer{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
